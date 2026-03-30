@@ -1,4 +1,4 @@
-# hipster-entity
+# java-hipster-entity
 
 `hipster-entity` is an interface-first Java entity model focused on extracting strong structural metadata that can be reused across runtime helpers, code generation, and higher-level tooling.
 
