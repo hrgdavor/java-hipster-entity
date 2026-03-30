@@ -1,20 +1,19 @@
-TODO 
-- proxy for entity view that reads from Entity
-- automatic creation of builder interface
-- proxy for builder that uses EntityUpdateArray internally
-- proxy for builder with change tracking EntityUpdateTrackingArray internally
-- Use maybe factory for those classes, so proxy variants can be replaced with generated implementations if some need performance that way.
+# hipster-entity
 
+`hipster-entity` is an interface-first Java entity model focused on extracting strong structural metadata that can be reused across runtime helpers, code generation, and higher-level tooling.
 
-# Performance 
+The project favors explicit metadata and predictable contracts over reflection-heavy runtime discovery. Runtime helpers such as proxies, builders, and factories are layered components that can be adopted incrementally.
 
-Many use cases performance of the interface implementation is not relevant that much,
-so initially it is a good idea to implement the bridge with proxies.
+## Implementation direction
 
-Records can be used to internal caching and immutability requirements.
+- Proxy-backed builders and views are the baseline implementation path.
+- Change tracking is ordinal/bitmask based for compact and predictable behavior.
+- Generated/materialized implementations are targeted optimizations for measured hotspots, not the default.
 
-For specific cases concrete implementations can be generated into concrete Java classes to 
-allow compiler to optimize the code further. Also specific use cases can be coded manually
-as the interface only definex how your code sees, data, actual access is up to you, and
-what you want to do with metadata.
+## Documentation
+
+- [Project docs index](doc/README.md)
+- [Architecture decisions](doc/architecture/DECISIONS.md)
+- [Roadmap](doc/roadmap/README.md)
+- [User documentation](doc/user/README.md)
 
