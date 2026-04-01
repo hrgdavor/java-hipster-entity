@@ -2,6 +2,9 @@ package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
 import hr.hrg.hipster.entity.api.EntityReader;
+import hr.hrg.hipster.entity.api.EntityUpdate;
+
+import java.util.Objects;
 
 /**
  * Base for update-tracking entity array views.
@@ -9,7 +12,7 @@ import hr.hrg.hipster.entity.api.EntityReader;
  * Concrete subclasses hold their builder as a concrete type so the JVM can
  * statically dispatch (and inline) {@link #mark}/{@link #clear} on the hot path.
  */
-public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements EntityReader<ID, T, F> {
+public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements EntityUpdate<ID, T, F> {
 
     protected final Class<F> enumClass;
     protected final Object[] values;
@@ -61,5 +64,29 @@ public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F 
     @Override
     public Object get(int fieldOrdinal) {
         return values[fieldOrdinal];
+    }
+
+    @Override
+    public Object set(F field, Object value) {
+        return set(field.ordinal(), value);
+    }
+
+    @Override
+    public Object set(int fieldOrdinal, Object value) {
+        if (fieldOrdinal < 0 || fieldOrdinal >= values.length) {
+            throw new IndexOutOfBoundsException("Field ordinal out of bounds: " + fieldOrdinal);
+        }
+        if (fieldOrdinal == 0) {
+            throw new UnsupportedOperationException("ID field is immutable in EntityUpdateTrackingArray");
+        }
+
+        Object previous = values[fieldOrdinal];
+        if (Objects.equals(previous, value)) {
+            return previous;
+        }
+
+        values[fieldOrdinal] = value;
+        mark(fieldOrdinal);
+        return previous;
     }
 }

@@ -22,5 +22,6 @@ Architecture decisions are organized individually in the [decisions](decisions/)
 | [DEC-012](decisions/DEC-012.md) | Update-array and change-tracking      | Proposed |
 | [DEC-013](decisions/DEC-013.md) | Implementation selection factory      | Proposed |
 | [DEC-014](decisions/DEC-014.md) | EnumSet concrete dispatch strategy    | Accepted |
+| [DEC-015](decisions/DEC-015.md) | Field metadata method lookup strategy | Accepted |
 
 See individual decision files in [decisions/](decisions/) for complete details.

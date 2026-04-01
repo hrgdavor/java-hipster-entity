@@ -41,6 +41,8 @@ This folder contains individual decision records for the hipster-entity project 
 |                       | Notes: Optional module; needs override precedence and provider contract |          |            |
 | [DEC-014](DEC-014.md) | **EnumSet concrete dispatch strategy**                                  | Accepted | 2026-03-31 |
 |                       | Notes: JMH benchmarks validate dispatch benefit; strategy is optional   |          |            |
+| [DEC-015](DEC-015.md) | **Generated field metadata method lookup strategy**                     | Accepted | 2026-04-01 |
+|                       | Notes: Generated sorted arrays + binary search baseline; char-bucket optimization is optional and benchmark-gated |          |            |
 
 ## Template
 

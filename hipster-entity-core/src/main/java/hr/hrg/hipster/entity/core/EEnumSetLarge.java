@@ -28,7 +28,6 @@ public final class EEnumSetLarge<E extends Enum<E>> implements EEnumSet<E>{
 		}
 	}
 
-
 	protected EEnumSetLarge(Class<E> enumClass, List<E> values){
 		this.enumClass = enumClass;
 

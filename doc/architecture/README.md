@@ -7,6 +7,7 @@ Related decisions and implementation guides:
 
 - [Architecture decisions index](DECISIONS.md) — all architecture decisions (Accepted, Proposed, Trial, etc.)
 - [DEC-014: EnumSet concrete dispatch strategy](decisions/DEC-014.md) — concrete dispatch specialization for change tracking
+- [DEC-015: Generated field metadata method lookup strategy](decisions/DEC-015.md) — generated sorted arrays, binary search dispatch, and optional char-bucket prefilter
 - [EnumSet implementation guide](enumset-implementation-and-jmh.md) — how-to reference with JMH profile and measured results
 
 ## 1. Core principle
@@ -133,6 +134,9 @@ The metadata generator aggregates all fields from all views into an `allFields` 
    - the base `id` property first
    - no duplicate property entries (child property wins if present)
 6. Annotate non-column fields with `@FieldSource` so generators can distinguish columns from derived/joined fields.
+7. For array-backed view field-definition enums, enum constant names MUST match view accessor and record component casing exactly (e.g. `id`, `firstName`, `departmentName`) even though this intentionally differs from typical `UPPER_SNAKE_CASE` enum style.
+8. Field-definition method mapping MUST use generated string switch dispatch as the canonical resolver for proxy method lookups.
+9. Alternative techniques (array binary search, char prefilter, perfect hash) are experimental and may be considered only with explicit benchmark evidence; they are not required to be emitted by default.
 
 ## 7. Entity metadata example
 
