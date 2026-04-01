@@ -95,6 +95,53 @@ It is building a model that should support:
 That is broader than “emit some extra Java files during javac”.
 A separate source-analysis pipeline is a better architectural center because it can be reused by many tools, not just the compiler.
 
+## 2.6 Annotation processing gets more fragile more code is generated
+
+This is where practical experience matters most.
+In our own experiments with custom processors and Dagger-based graphs, fragility increased as generated surface area grew.
+
+Observed pattern from custom processors:
+- incremental mode frequently runs without full-project visibility, so cross-type metadata (especially collection and graph-level metadata) is incomplete in some rounds
+- trying to compensate with processor-side caches introduces a second consistency problem (cache invalidation across partial recompiles)
+- the more generated outputs depend on transitive type information, the easier it is for one stale edge to poison downstream generated code
+- failure recovery often degrades into repeated clean builds rather than deterministic incremental fixes
+
+Observed pattern from Dagger usage:
+- generated components and binding graphs are sensitive to ordering and transitive visibility during edits
+- during refactors, temporary symbol breakage tends to produce large error cascades that are hard to map back to one source change
+- stale generated artifacts can survive just long enough to create misleading diagnostics, especially in IDE incremental loops
+- multi-module graph updates can require broader rebuild scope than expected, reducing iteration speed
+
+These problems are not unique to one codebase.
+Across processor-heavy stacks, teams commonly report similar limitations:
+- aggregating processors reduce incremental-build effectiveness because they need broader project knowledge
+- isolating processors scale better incrementally, but many real generators are only partially isolating in practice
+- mixed environments (IDE compiler, Maven/Gradle CLI, CI) can disagree on when generated sources are current
+- round-based processing model makes partial-broken-source workflows awkward compared with sidecar source analysis
+- diagnostics often appear at generated call sites rather than at the conceptual source-of-truth location
+
+The key point is not that annotation processing never works.
+The key point is that reliability cost rises with generation breadth and graph complexity.
+For metadata-first architecture, those costs land directly on the most critical path: deterministic model generation.
+
+That is why this project prefers:
+- source analysis outside javac rounds
+- explicit, source-visible generated artifacts
+- deterministic regeneration semantics under partial edits
+- failure modes that degrade locally (one file or one unit), not globally (whole processor graph)
+
+External signals from ecosystem documentation:
+- Gradle documents explicit limitations for incremental annotation processing, including strict processor constraints (`isolating` vs `aggregating`), conditions that disable incremental behavior, and cases that force broader recompilation.
+- Gradle also documents that aggregating processors are always reprocessed and their generated outputs recompiled, which directly aligns with observed scaling fragility for graph-level generators.
+- Kotlin kapt documentation flags operational caveats: build-cache reliability depends on processor behavior, IntelliJ's internal build does not support kapt, and Kotlin-source generation has round-model limitations (for example, no multiple rounds for generated Kotlin sources).
+- Kotlin documentation explicitly recommends Kotlin Symbol Processing (KSP) for Kotlin projects, which is a practical signal that classic annotation-processing pipelines carry non-trivial overhead/constraints in modern Kotlin builds.
+- Dagger documentation confirms strict compile-time graph validation and extensive generated-code surface (`Dagger*`, `*_Factory`, `*_MembersInjector`), which explains why refactor-phase failures can cascade when dependency graphs are incomplete or temporarily inconsistent.
+
+Reference pages:
+- https://docs.gradle.org/current/userguide/java_plugin.html
+- https://kotlinlang.org/docs/kapt.html
+- https://dagger.dev/dev-guide/
+
 ## 3. Why generated metadata and materialized code are preferred over reflection
 
 ## 3.1 Reflection recomputes structure that is already known from source

@@ -3,6 +3,12 @@
 The architecture is metadata-first: interface contracts and generated metadata are the primary outputs.
 Runtime pieces built on top of that metadata, such as proxies, builders, factories, or adapters, are optional building blocks that projects may adopt selectively.
 
+Related decisions and implementation guides:
+
+- [Architecture decisions index](DECISIONS.md) — all architecture decisions (Accepted, Proposed, Trial, etc.)
+- [DEC-014: EnumSet concrete dispatch strategy](decisions/DEC-014.md) — concrete dispatch specialization for change tracking
+- [EnumSet implementation guide](enumset-implementation-and-jmh.md) — how-to reference with JMH profile and measured results
+
 ## 1. Core principle
 
 All entities are defined as interfaces that intentionally align with records and not JavaBeans.

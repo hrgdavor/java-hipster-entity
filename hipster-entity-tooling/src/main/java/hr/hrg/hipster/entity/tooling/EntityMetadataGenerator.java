@@ -1,0 +1,850 @@
+package hr.hrg.hipster.entity.tooling;
+
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParseResult;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.MemberValuePair;
+import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.SimpleName;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+
+import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class EntityMetadataGenerator {
+
+    public static class Property {
+        public final String name;
+        public final String type;
+        public final String fieldKind;   // COLUMN, DERIVED, JOINED (null = COLUMN default)
+        public final String column;      // explicit DB column name (null = use method name)
+        public final String relation;    // relation path for JOINED fields
+        public final String expression;  // expression for DERIVED fields
+
+        public Property(String name, String type) {
+            this(name, type, null, null, null, null);
+        }
+
+        public Property(String name, String type, String fieldKind, String column, String relation, String expression) {
+            this.name = name;
+            this.type = type;
+            this.fieldKind = fieldKind;
+            this.column = column;
+            this.relation = relation;
+            this.expression = expression;
+        }
+    }
+
+    public static class ViewMeta {
+        public final String name;
+        public final List<String> extendsTypes;
+        public final Boolean read;
+        public final Boolean write;
+        public final List<Property> properties;
+
+        public ViewMeta(String name, List<String> extendsTypes, Boolean read, Boolean write, List<Property> properties) {
+            this.name = name;
+            this.extendsTypes = extendsTypes;
+            this.read = read;
+            this.write = write;
+            this.properties = properties;
+        }
+    }
+
+    public static class EntityMeta {
+        public final String entityName;
+        public final String packageName;
+        public final String markerInterface;
+        public final String idType;
+        public final List<ViewMeta> views;
+        public final List<EntityFieldMeta> allFields;
+
+        public EntityMeta(String entityName, String packageName, String markerInterface, String idType, List<ViewMeta> views, List<EntityFieldMeta> allFields) {
+            this.entityName = entityName;
+            this.packageName = packageName;
+            this.markerInterface = markerInterface;
+            this.idType = idType;
+            this.views = views;
+            this.allFields = allFields;
+        }
+    }
+
+    /** Entity-wide field metadata: one entry per unique field name across all views. */
+    public static class EntityFieldMeta {
+        public final String name;
+        public String type;          // primary type (non-derived wins over derived)
+        public String fieldKind;
+        public String column;
+        public String relation;
+        public String expression;
+        public final List<String> views;
+        public final Map<String, String> typeByView; // view name → type in that view
+
+        public EntityFieldMeta(String name, String type, String fieldKind, String column, String relation, String expression, List<String> views) {
+            this.name = name;
+            this.type = type;
+            this.fieldKind = fieldKind;
+            this.column = column;
+            this.relation = relation;
+            this.expression = expression;
+            this.views = views;
+            this.typeByView = new LinkedHashMap<>();
+        }
+
+        public boolean hasTypeDivergence() {
+            if (typeByView.size() <= 1) return false;
+            String first = null;
+            for (String t : typeByView.values()) {
+                if (first == null) first = t;
+                else if (!first.equals(t)) return true;
+            }
+            return false;
+        }
+    }
+
+    private static class TypeDescriptor {
+        final String typeName;
+        final List<TypeDescriptor> typeArguments;
+        final boolean array;
+        final boolean primitive;
+
+        TypeDescriptor(String typeName, List<TypeDescriptor> typeArguments, boolean array, boolean primitive) {
+            this.typeName = typeName;
+            this.typeArguments = typeArguments;
+            this.array = array;
+            this.primitive = primitive;
+        }
+
+        boolean isParameterized() {
+            return typeArguments != null && !typeArguments.isEmpty();
+        }
+    }
+
+    private static TypeDescriptor parseTypeDescriptor(String rawType) {
+        String type = rawType.trim();
+        boolean array = false;
+        while (type.endsWith("[]")) {
+            array = true;
+            type = type.substring(0, type.length() - 2).trim();
+        }
+
+        int genericStart = type.indexOf('<');
+        if (genericStart < 0) {
+            boolean primitive = isPrimitiveType(type) || isBoxedPrimitiveType(type);
+            String typeName;
+            if (primitive) {
+                typeName = boxedPrimitiveClass(type);
+                if (typeName == null) {
+                    typeName = classLiteral(type);
+                }
+            } else {
+                typeName = classLiteral(type);
+            }
+            return new TypeDescriptor(typeName, List.of(), array, primitive);
+        }
+
+        String raw = type.substring(0, genericStart).trim();
+        String inner = type.substring(genericStart + 1, type.lastIndexOf('>'));
+        String[] generics = splitGenerics(inner);
+        List<TypeDescriptor> args = new ArrayList<>();
+
+        for (String g : generics) {
+            args.add(parseTypeDescriptor(g));
+        }
+
+        return new TypeDescriptor(classLiteral(raw), args, array, false);
+    }
+
+    private static void appendJsonType(StringBuilder sb, TypeDescriptor td, boolean trailingComma, int indent) {
+        String indentStr = " ".repeat(indent);
+        if (!td.isParameterized() && !td.array) {
+            if (td.primitive) {
+                sb.append(indentStr).append("{\n");
+                sb.append(indentStr).append("  \"type\": \"").append(td.typeName).append("\",").append("\n");
+                sb.append(indentStr).append("  \"unboxed\": \"").append(unboxedPrimitiveType(td.typeName)).append("\",").append("\n");
+                sb.append(indentStr).append("  \"primitive\": true\n");
+                sb.append(indentStr).append("}");
+                if (trailingComma) sb.append(",");
+                sb.append("\n");
+                return;
+            }
+            sb.append(indentStr).append("\"").append(td.typeName).append("\"");
+            if (trailingComma) sb.append(",");
+            sb.append("\n");
+            return;
+        }
+
+        sb.append(indentStr).append("{\n");
+        sb.append(indentStr).append("  \"type\": \"").append(td.typeName).append("\",").append("\n");
+        if (td.array) {
+            sb.append(indentStr).append("  \"array\": true,").append("\n");
+        }
+        if (td.isParameterized()) {
+            sb.append(indentStr).append("  \"genericArguments\": [\n");
+            for (int i = 0; i < td.typeArguments.size(); i++) {
+                appendJsonType(sb, td.typeArguments.get(i), i < td.typeArguments.size() - 1, indent + 4);
+            }
+            sb.append(indentStr).append("  ]\n");
+        }
+        sb.append(indentStr).append("}");
+        if (trailingComma) sb.append(",");
+        sb.append("\n");
+    }
+
+    public static void main(String[] args) throws IOException {
+        if (args.length < 2) {
+            System.err.println("Usage: java ... EntityMetadataGenerator <source-root> <output-dir>");
+            System.exit(1);
+        }
+
+        Path sourceRoot = Path.of(args[0]);
+        Path outputDir = Path.of(args[1]);
+        generate(sourceRoot, outputDir);
+    }
+
+    public static void generate(Path sourceRoot, Path outputDir) throws IOException {
+        Map<String, InterfaceInfo> interfaceMap = new HashMap<>();
+
+        Files.walk(sourceRoot)
+                .filter(p -> p.toString().endsWith(".java"))
+                .forEach(filePath -> {
+                    try {
+                        String source = Files.readString(filePath);
+                        ParseResult<CompilationUnit> parseResult = new JavaParser().parse(source);
+                        CompilationUnit cu = parseResult.getResult().orElse(null);
+                        if (cu == null) {
+                            return;
+                        }
+
+                        String packageName = cu.getPackageDeclaration().map(pd -> pd.getNameAsString()).orElse("");
+                        for (ClassOrInterfaceDeclaration decl : cu.findAll(ClassOrInterfaceDeclaration.class)) {
+                            if (!decl.isInterface()) {
+                                continue;
+                            }
+
+                            InterfaceInfo info = new InterfaceInfo();
+                            info.packageName = packageName;
+                            info.name = decl.getNameAsString();
+                            info.extendsTypes = decl.getExtendedTypes().stream()
+                                    .map(ClassOrInterfaceType::asString)
+                                    .collect(Collectors.toList());
+
+                            info.properties = decl.getMethods().stream()
+                                    .filter(method -> method.getParameters().isEmpty())
+                                    .filter(method -> !method.getType().isVoidType())
+                                    .map(method -> parseProperty(method))
+                                    .collect(Collectors.toList());
+
+                            info.view = parseViewAnnotation(decl);
+                            info.entityBaseIdType = parseEntityBaseIdType(decl);
+                            interfaceMap.put(getQualifiedName(packageName, info.name), info);
+                        }
+
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+        Map<String, List<InterfaceInfo>> packageToMarkers = new HashMap<>();
+
+        for (InterfaceInfo info : interfaceMap.values()) {
+            if (info.isMarkerEntity()) {
+                packageToMarkers.computeIfAbsent(info.packageName, __ -> new ArrayList<>()).add(info);
+            }
+        }
+
+        for (List<InterfaceInfo> markers : packageToMarkers.values()) {
+            for (InterfaceInfo marker : markers) {
+                String entityName = marker.name.endsWith("Entity") ? marker.name.substring(0, marker.name.length() - 6) : marker.name;
+
+                List<ViewMeta> views = interfaceMap.values().stream()
+                        .filter(i -> !i.name.equals(marker.name))
+                        .filter(i -> isDerivedFrom(i, marker, interfaceMap))
+                        .map(i -> new ViewMeta(i.name, i.extendsTypes, i.view == null ? null : i.view.read,
+                                i.view == null ? null : i.view.write, i.properties))
+                        .collect(Collectors.toList());
+
+                List<EntityFieldMeta> allFields = collectEntityFields(views, marker, interfaceMap);
+                EntityMeta entityMeta = new EntityMeta(entityName, marker.packageName, marker.name, marker.entityBaseIdType, views, allFields);
+                String json = toJson(entityMeta);
+
+                Files.createDirectories(outputDir);
+                Path outFile = outputDir.resolve(entityName + ".metadata.json");
+                Files.writeString(outFile, json);
+
+                for (ViewMeta view : views) {
+                    InterfaceInfo viewInfo = interfaceMap.get(getQualifiedName(marker.packageName, view.name));
+                    List<Property> fullProperties = collectViewProperties(viewInfo, marker, interfaceMap);
+                    generateViewPropertyEnum(outputDir, marker.packageName, view, fullProperties);
+                }
+            }
+        }
+    }
+
+    private static class InterfaceInfo {
+        String packageName;
+        String name;
+        List<String> extendsTypes;
+        List<Property> properties;
+        ViewAttributes view;
+        String entityBaseIdType;
+
+        boolean isMarkerEntity() {
+            return name.endsWith("Entity") && entityBaseIdType != null;
+        }
+    }
+
+    private static class ViewAttributes {
+        final Boolean read;
+        final Boolean write;
+
+        private ViewAttributes(Boolean read, Boolean write) {
+            this.read = read;
+            this.write = write;
+        }
+    }
+
+    private static Property parseProperty(MethodDeclaration method) {
+        String name = method.getNameAsString();
+        String type = method.getType().asString();
+        String fieldKind = null;
+        String column = null;
+        String relation = null;
+        String expression = null;
+
+        Optional<AnnotationExpr> fsOpt = method.getAnnotationByName("FieldSource");
+        if (fsOpt.isPresent()) {
+            AnnotationExpr fs = fsOpt.get();
+            if (fs.isSingleMemberAnnotationExpr()) {
+                fieldKind = extractEnumValue(fs.asSingleMemberAnnotationExpr().getMemberValue().toString());
+            } else if (fs.isNormalAnnotationExpr()) {
+                for (MemberValuePair pair : fs.asNormalAnnotationExpr().getPairs()) {
+                    switch (pair.getName().asString()) {
+                        case "kind" -> fieldKind = extractEnumValue(pair.getValue().toString());
+                        case "column" -> column = stripQuotes(pair.getValue().toString());
+                        case "relation" -> relation = stripQuotes(pair.getValue().toString());
+                        case "expression" -> expression = stripQuotes(pair.getValue().toString());
+                    }
+                }
+            }
+        }
+        return new Property(name, type, fieldKind, column, relation, expression);
+    }
+
+    private static String extractEnumValue(String value) {
+        // Handle FieldKind.DERIVED or just DERIVED
+        int dot = value.lastIndexOf('.');
+        return dot >= 0 ? value.substring(dot + 1) : value;
+    }
+
+    private static String stripQuotes(String value) {
+        if (value == null) return null;
+        String v = value.trim();
+        if (v.startsWith("\"") && v.endsWith("\"")) {
+            v = v.substring(1, v.length() - 1);
+        }
+        return v.isEmpty() ? null : v;
+    }
+
+    private static List<EntityFieldMeta> collectEntityFields(List<ViewMeta> views, InterfaceInfo marker, Map<String, InterfaceInfo> interfaceMap) {
+        // Merge all fields from all views into entity-wide map
+        LinkedHashMap<String, EntityFieldMeta> fieldMap = new LinkedHashMap<>();
+
+        // id field is always first
+        String idType = marker != null && marker.entityBaseIdType != null ? toFullTypeName(marker.entityBaseIdType) : "java.lang.Object";
+        List<String> idViews = views.stream().map(v -> v.name).collect(Collectors.toList());
+        EntityFieldMeta idField = new EntityFieldMeta("id", idType, "COLUMN", null, null, null, idViews);
+        for (String vn : idViews) idField.typeByView.put(vn, idType);
+        fieldMap.put("id", idField);
+
+        for (ViewMeta view : views) {
+            InterfaceInfo viewInfo = interfaceMap.get(getQualifiedName(marker.packageName, view.name));
+            List<Property> fullProps = collectViewProperties(viewInfo, marker, interfaceMap);
+            for (Property prop : fullProps) {
+                String propKind = prop.fieldKind != null ? prop.fieldKind : "COLUMN";
+                if (fieldMap.containsKey(prop.name)) {
+                    EntityFieldMeta existing = fieldMap.get(prop.name);
+                    if (!existing.views.contains(view.name)) {
+                        existing.views.add(view.name);
+                    }
+                    existing.typeByView.put(view.name, prop.type);
+                    // Non-derived field takes priority over derived for primary type
+                    if ("DERIVED".equals(existing.fieldKind) && !"DERIVED".equals(propKind)) {
+                        existing.type = prop.type;
+                        existing.fieldKind = propKind;
+                        existing.column = prop.column;
+                        existing.relation = prop.relation;
+                        existing.expression = prop.expression;
+                    }
+                } else {
+                    List<String> viewList = new ArrayList<>();
+                    viewList.add(view.name);
+                    EntityFieldMeta fm = new EntityFieldMeta(prop.name, prop.type, propKind, prop.column, prop.relation, prop.expression, viewList);
+                    fm.typeByView.put(view.name, prop.type);
+                    fieldMap.put(prop.name, fm);
+                }
+            }
+        }
+
+        return new ArrayList<>(fieldMap.values());
+    }
+
+    private static ViewAttributes parseViewAnnotation(ClassOrInterfaceDeclaration decl) {
+        Optional<AnnotationExpr> viewOpt = decl.getAnnotationByName("View");
+        if (viewOpt.isEmpty()) {
+            return null;
+        }
+
+        Boolean read = null;
+        Boolean write = null;
+
+        AnnotationExpr view = viewOpt.get();
+        for (MemberValuePair pair : view.asNormalAnnotationExpr().getPairs()) {
+            switch (pair.getName().asString()) {
+                case "read" -> read = parseBooleanOption(pair.getValue().toString());
+                case "write" -> write = parseBooleanOption(pair.getValue().toString());
+            }
+        }
+
+        return new ViewAttributes(read, write);
+    }
+
+    private static Boolean parseBooleanOption(String value) {
+        if (value.contains("TRUE")) return Boolean.TRUE;
+        if (value.contains("FALSE")) return Boolean.FALSE;
+        return null;
+    }
+
+    private static String parseEntityBaseIdType(ClassOrInterfaceDeclaration decl) {
+        for (ClassOrInterfaceType ext : decl.getExtendedTypes()) {
+            if ("EntityBase".equals(ext.getNameAsString())) {
+                if (ext.getTypeArguments().isPresent()) {
+                    return ext.getTypeArguments().get().stream().findFirst().map(Object::toString).orElse(null);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String getQualifiedName(String pkg, String name) {
+        return (pkg.isEmpty() ? "" : pkg + ".") + name;
+    }
+
+    private static boolean isDerivedFrom(InterfaceInfo candidate, InterfaceInfo marker, Map<String, InterfaceInfo> interfaceMap) {
+        if (candidate.name.equals(marker.name)) {
+            return false;
+        }
+
+        Set<String> visited = new HashSet<>();
+        return isDerivedFromRecursive(candidate, marker, interfaceMap, visited);
+    }
+
+    private static boolean isDerivedFromRecursive(InterfaceInfo candidate, InterfaceInfo marker, Map<String, InterfaceInfo> interfaceMap, Set<String> visited) {
+        if (visited.contains(candidate.name)) {
+            return false;
+        }
+        visited.add(candidate.name);
+
+        for (String extName : candidate.extendsTypes) {
+            if (extName.contains("<")) {
+                extName = extName.substring(0, extName.indexOf('<'));
+            }
+
+            if (extName.equals(marker.name) || extName.equals(marker.packageName + "." + marker.name)) {
+                return true;
+            }
+
+            InterfaceInfo parent = interfaceMap.get(getQualifiedName(candidate.packageName, extName));
+            if (parent != null && isDerivedFromRecursive(parent, marker, interfaceMap, visited)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static String toJson(EntityMeta entityMeta) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n");
+        appendJsonField(sb, "entityName", entityMeta.entityName, true);
+        appendJsonField(sb, "package", entityMeta.packageName, true);
+        appendJsonField(sb, "markerInterface", entityMeta.markerInterface, true);
+        sb.append("  \"idType\": ");
+        appendJsonType(sb, parseTypeDescriptor(entityMeta.idType), true, 0);
+
+        sb.append("  \"views\": [\n");
+        for (int i = 0; i < entityMeta.views.size(); i++) {
+            ViewMeta view = entityMeta.views.get(i);
+            sb.append("    {\n");
+            appendJsonField(sb, "name", view.name, true, 6);
+            sb.append("      \"extends\": [");
+            sb.append(view.extendsTypes.stream().map(EntityMetadataGenerator::escapeJson).map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")));
+            sb.append("],\n");
+            appendJsonField(sb, "read", view.read, true, 6);
+            appendJsonField(sb, "write", view.write, true, 6);
+            sb.append("      \"properties\": [\n");
+            for (int j = 0; j < view.properties.size(); j++) {
+                Property prop = view.properties.get(j);
+                sb.append("        {\n");
+                appendJsonField(sb, "name", prop.name, true, 8);
+                sb.append("        \"type\": ");
+                boolean hasTrailingFields = prop.fieldKind != null;
+                appendJsonType(sb, parseTypeDescriptor(prop.type), hasTrailingFields, 0);
+                if (prop.fieldKind != null) {
+                    appendJsonField(sb, "fieldKind", prop.fieldKind, prop.column != null || prop.relation != null || prop.expression != null, 8);
+                    if (prop.column != null) {
+                        appendJsonField(sb, "column", prop.column, prop.relation != null || prop.expression != null, 8);
+                    }
+                    if (prop.relation != null) {
+                        appendJsonField(sb, "relation", prop.relation, prop.expression != null, 8);
+                    }
+                    if (prop.expression != null) {
+                        appendJsonField(sb, "expression", prop.expression, false, 8);
+                    }
+                }
+                sb.append("        }");
+                if (j < view.properties.size() - 1) sb.append(",");
+                sb.append("\n");
+            }
+            sb.append("      ]\n");
+            sb.append("    }");
+            if (i < entityMeta.views.size() - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("  ],\n");
+
+        // Entity-wide field summary
+        sb.append("  \"allFields\": [\n");
+        for (int i = 0; i < entityMeta.allFields.size(); i++) {
+            EntityFieldMeta f = entityMeta.allFields.get(i);
+            sb.append("    {\n");
+            appendJsonField(sb, "name", f.name, true, 6);
+            sb.append("      \"type\": ");
+            appendJsonType(sb, parseTypeDescriptor(f.type), true, 0);
+            appendJsonField(sb, "fieldKind", f.fieldKind, true, 6);
+            if (f.column != null) {
+                appendJsonField(sb, "column", f.column, true, 6);
+            }
+            if (f.relation != null) {
+                appendJsonField(sb, "relation", f.relation, true, 6);
+            }
+            if (f.expression != null) {
+                appendJsonField(sb, "expression", f.expression, true, 6);
+            }
+            sb.append("      \"views\": [");
+            sb.append(f.views.stream().map(v -> "\"" + escapeJson(v) + "\"").collect(Collectors.joining(", ")));
+            sb.append("],\n");
+            // typeByView: always present, shows type per view
+            sb.append("      \"typeByView\": {\n");
+            int tvIdx = 0;
+            for (Map.Entry<String, String> entry : f.typeByView.entrySet()) {
+                sb.append("        \"" + escapeJson(entry.getKey()) + "\": ");
+                appendJsonType(sb, parseTypeDescriptor(entry.getValue()), tvIdx < f.typeByView.size() - 1, 0);
+                tvIdx++;
+            }
+            sb.append("      }\n");
+            sb.append("    }");
+            if (i < entityMeta.allFields.size() - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("  ]\n");
+        sb.append("}");
+        return sb.toString();
+    }
+
+    private static void appendJsonField(StringBuilder sb, String key, String value, boolean trailingComma) {
+        appendJsonField(sb, key, value, trailingComma, 2);
+    }
+
+    private static void appendJsonField(StringBuilder sb, String key, String value, boolean trailingComma, int indent) {
+        String indentStr = " ".repeat(indent);
+        sb.append(indentStr).append("\"").append(key).append("\": ");
+        if (value == null) {
+            sb.append("null");
+        } else {
+            sb.append("\"").append(escapeJson(value)).append("\"");
+        }
+        if (trailingComma) sb.append(",");
+        sb.append("\n");
+    }
+
+    private static void appendJsonField(StringBuilder sb, String key, Boolean value, boolean trailingComma, int indent) {
+        String indentStr = " ".repeat(indent);
+        sb.append(indentStr).append("\"").append(key).append("\": ");
+        if (value == null) {
+            sb.append("null");
+        } else {
+            sb.append(value);
+        }
+        if (trailingComma) sb.append(",");
+        sb.append("\n");
+    }
+
+    private static String escapeJson(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
+
+    private static void generateViewPropertyEnum(Path outputDir, String packageName, ViewMeta view, List<Property> fullProperties) throws IOException {
+        String enumName = view.name + "Property";
+        Path packageDir = outputDir;
+        if (!packageName.isBlank()) {
+            packageDir = outputDir.resolve(packageName.replace('.', '/'));
+        }
+        Files.createDirectories(packageDir);
+
+        Path enumFile = packageDir.resolve(enumName + ".java");
+        StringBuilder sb = new StringBuilder();
+
+        if (!packageName.isBlank()) {
+            sb.append("package ").append(packageName).append(";\n\n");
+        }
+
+        sb.append("import java.lang.reflect.Type;\n");
+        sb.append("import hr.hrg.hipster.entity.api.TypeUtils;\n\n");
+
+        sb.append("public enum ").append(enumName).append(" {\n");
+
+        for (int i = 0; i < fullProperties.size(); i++) {
+            Property prop = fullProperties.get(i);
+            String constantName = prop.name; // use property name as enum constant identifier
+            sb.append("    ").append(constantName)
+                    .append("(").append(typeExpression(prop.type)).append(")");
+            if (i < view.properties.size() - 1) {
+                sb.append(",\n");
+            } else {
+                sb.append(";\n");
+            }
+        }
+
+        sb.append("\n    private final Type propertyType;\n\n");
+        sb.append("    ").append(enumName).append("(Type propertyType) {\n");
+        sb.append("        this.propertyType = propertyType;\n");
+        sb.append("    }\n\n");
+        sb.append("    public String getPropertyName() { return name(); }\n");
+        sb.append("    public Type getPropertyType() { return propertyType; }\n");
+        sb.append("}\n");
+
+        Files.writeString(enumFile, sb.toString());
+    }
+
+    private static String toEnumConstant(String propertyName) {
+        return propertyName
+                .replaceAll("[^A-Za-z0-9]", "_")
+                .replaceAll("([a-z])([A-Z])", "$1_$2")
+                .toUpperCase();
+    }
+
+    private static List<Property> collectViewProperties(InterfaceInfo viewInfo, InterfaceInfo marker, Map<String, InterfaceInfo> interfaceMap) {
+        LinkedHashMap<String, Property> merged = new LinkedHashMap<>();
+
+        String idType = marker != null && marker.entityBaseIdType != null ? toFullTypeName(marker.entityBaseIdType) : "java.lang.Object";
+        merged.put("id", new Property("id", idType));
+
+        Set<String> visited = new HashSet<>();
+        collectInterfaceProperties(viewInfo, merged, interfaceMap, visited);
+
+        return new ArrayList<>(merged.values());
+    }
+
+    private static void collectInterfaceProperties(InterfaceInfo current, LinkedHashMap<String, Property> merged, Map<String, InterfaceInfo> interfaceMap, Set<String> visited) {
+        if (current == null || !visited.add(current.name)) {
+            return;
+        }
+
+        for (String extName : current.extendsTypes) {
+            String qualified = extName.contains(".") ? extName : getQualifiedName(current.packageName, extName.replaceAll("<.*>$", ""));
+            InterfaceInfo parent = interfaceMap.get(qualified);
+            collectInterfaceProperties(parent, merged, interfaceMap, visited);
+        }
+
+        for (Property prop : current.properties) {
+            if (!merged.containsKey(prop.name)) {
+                merged.put(prop.name, prop);
+            }
+        }
+    }
+
+    private static String typeExpression(String rawType) {
+        String type = rawType.trim();
+        if (type.endsWith("[]")) {
+            String element = typeExpression(type.substring(0, type.length() - 2));
+            return "java.lang.reflect.Array.newInstance(" + element + ", 0).getClass()";
+        }
+
+        int genericStart = type.indexOf('<');
+        if (genericStart < 0) {
+            if (isPrimitiveType(type)) {
+                return boxedPrimitiveClass(type) + ".class";
+            }
+            String literal = classLiteral(type);
+            return literal + ".class";
+        }
+
+        String raw = type.substring(0, genericStart).trim();
+        String args = type.substring(genericStart + 1, type.lastIndexOf('>'));
+        String[] generics = splitGenerics(args);
+        StringBuilder argExpr = new StringBuilder();
+        for (int i = 0; i < generics.length; i++) {
+            argExpr.append(typeExpression(generics[i]));
+            if (i < generics.length - 1) argExpr.append(", ");
+        }
+
+        return "TypeUtils.parameterizedType(" + classLiteral(raw) + ".class, " + argExpr + ")";
+    }
+
+    private static String[] splitGenerics(String args) {
+        List<String> tokens = new ArrayList<>();
+        int depth = 0;
+        StringBuilder current = new StringBuilder();
+        for (char c : args.toCharArray()) {
+            if (c == '<') {
+                depth++;
+            } else if (c == '>') {
+                depth--;
+            }
+
+            if (c == ',' && depth == 0) {
+                tokens.add(current.toString().trim());
+                current.setLength(0);
+                continue;
+            }
+            current.append(c);
+        }
+        if (current.length() > 0) {
+            tokens.add(current.toString().trim());
+        }
+        return tokens.toArray(new String[0]);
+    }
+
+    private static boolean isPrimitiveType(String typeName) {
+        return switch (typeName) {
+            case "byte", "short", "int", "long", "float", "double", "boolean", "char" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean isBoxedPrimitiveType(String typeName) {
+        return switch (typeName) {
+            case "Byte", "Short", "Integer", "Long", "Float", "Double", "Boolean", "Character",
+                 "java.lang.Byte", "java.lang.Short", "java.lang.Integer", "java.lang.Long",
+                 "java.lang.Float", "java.lang.Double", "java.lang.Boolean", "java.lang.Character" -> true;
+            default -> false;
+        };
+    }
+
+    private static String boxedPrimitiveClass(String typeName) {
+        return switch (typeName) {
+            case "byte" -> "java.lang.Byte";
+            case "short" -> "java.lang.Short";
+            case "int" -> "java.lang.Integer";
+            case "long" -> "java.lang.Long";
+            case "float" -> "java.lang.Float";
+            case "double" -> "java.lang.Double";
+            case "boolean" -> "java.lang.Boolean";
+            case "char" -> "java.lang.Character";
+            default -> null;
+        };
+    }
+
+    private static String unboxedPrimitiveType(String boxedTypeName) {
+        return switch (boxedTypeName) {
+            case "java.lang.Byte" -> "byte";
+            case "java.lang.Short" -> "short";
+            case "java.lang.Integer" -> "int";
+            case "java.lang.Long" -> "long";
+            case "java.lang.Float" -> "float";
+            case "java.lang.Double" -> "double";
+            case "java.lang.Boolean" -> "boolean";
+            case "java.lang.Character" -> "char";
+            default -> null;
+        };
+    }
+
+    private static String classLiteral(String typeName) {
+        switch (typeName) {
+            case "byte": return "byte";
+            case "short": return "short";
+            case "int": return "int";
+            case "long": return "long";
+            case "float": return "float";
+            case "double": return "double";
+            case "boolean": return "boolean";
+            case "char": return "char";
+            case "void": return "void";
+            case "String": return "java.lang.String";
+            case "Long": return "java.lang.Long";
+            case "Integer": return "java.lang.Integer";
+            case "Boolean": return "java.lang.Boolean";
+            case "Double": return "java.lang.Double";
+            case "Float": return "java.lang.Float";
+            case "Character": return "java.lang.Character";
+            case "Object": return "java.lang.Object";
+            case "List": return "java.util.List";
+            case "Set": return "java.util.Set";
+            case "Map": return "java.util.Map";
+            case "Collection": return "java.util.Collection";
+            case "Optional": return "java.util.Optional";
+            default:
+                if (typeName.contains(".")) {
+                    return typeName;
+                }
+                // Keep unqualified for same-package or imported types.
+                return typeName;
+        }
+    }
+
+    private static String toFullTypeName(String rawType) {
+        if (rawType == null || rawType.isBlank()) {
+            return rawType;
+        }
+
+        String type = rawType.trim();
+        if (type.endsWith("[]")) {
+            String element = toFullTypeName(type.substring(0, type.length() - 2));
+            return element + "[]";
+        }
+
+        int genericStart = type.indexOf('<');
+        if (genericStart < 0) {
+            return classLiteral(type);
+        }
+
+        String raw = type.substring(0, genericStart).trim();
+        String args = type.substring(genericStart + 1, type.lastIndexOf('>'));
+        String[] generics = splitGenerics(args);
+        StringBuilder builder = new StringBuilder();
+        builder.append(classLiteral(raw)).append("<");
+        for (int i = 0; i < generics.length; i++) {
+            builder.append(toFullTypeName(generics[i]));
+            if (i < generics.length - 1) builder.append(", ");
+        }
+        builder.append(">");
+        return builder.toString();
+    }
+}
+
+
+

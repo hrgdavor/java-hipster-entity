@@ -38,6 +38,7 @@ This document tracks roadmap progress, current work, and changes in direction fo
 | `DEC-011` | Automatic builder interface generation     | Proposed        | Needs canonical builder interface contract and compatibility test kit                       |
 | `DEC-012` | Update-array and change-tracking semantics | Proposed        | Needs touched/dirty/null semantics and merge-mode contract                                  |
 | `DEC-013` | Optional per-view impl. selection factory  | Proposed        | Optional module; needs override precedence, fallback policy, and provider ordering contract |
+| `DEC-014` | EnumSet concrete dispatch strategy         | Accepted        | Implemented with JMH benchmarks; strategy is optional for update tracking hot paths        |
 
 ## 4. Direction change log
 

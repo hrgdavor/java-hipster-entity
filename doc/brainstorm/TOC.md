@@ -14,6 +14,7 @@
 - [DEC-011 automatic builder interface generation](dec-011-builder-interface-generation.md)
 - [DEC-012 update-array and change-tracking semantics](dec-012-update-array-and-change-tracking.md)
 - [DEC-013 factory and implementation selection strategy](dec-013-factory-and-implementation-selection.md)
+- [DEC-014 enumset concrete dispatch strategy](dec-014-enumset-concrete-dispatch-strategy.md)
 - [Open questions index](open-questions-index.md)
 - [Annotation processing vs generated metadata rationale](annotation-processing-vs-generated-metadata.md)
 - [Entity metadata generator notes](entity-metadata-generator.md)

@@ -419,6 +419,30 @@ All proposals assume the metadata model is the single source of truth, and gener
 
 **What**: For every pair of views (A, B) sharing at least one field, generate a typed mapper that converts A → B. Skip field pairs where `fieldKind` makes the conversion non-applicable (e.g., DERIVED in write direction).
 
+---
+
+## 4. Brainstorm note: custom EEnumSet vs JDK EnumSet for array-backed proxy tracking
+
+Status: exploratory only, not a final design decision.
+
+Observation:
+- `java.util.EnumSet` is already highly optimized (single `long` for enums up to 64 values, `long[]` for larger enums).
+- For pure membership checks in view proxies, performance is expected to be similar.
+
+Potential advantage of custom `EEnumSet` in this project:
+- direct raw bit-segment access via `getBits0()` and `getBits(int)` enables an allocation-free flush loop over changed ordinals
+- custom sentinels (`EEnumSetEmpty`, `EEnumSetAll`) allow explicit fast-path semantics for no-changes / all-fields cases
+- project-specific callback and segment APIs integrate with array-backed update storage without adapter layers
+
+Important caveats before any decision:
+- current implementation still has open hardening work and behavioral alignment tasks
+- mutable and immutable responsibilities should be separated before judging final runtime characteristics
+- this should remain in brainstorm until correctness and migration tasks are complete
+
+Decision gate (later):
+- keep custom implementation only if benchmarks show meaningful end-to-end improvement on change-flush and patch-write paths compared to `EnumSet`-based baseline
+- otherwise prefer JDK `EnumSet` for reduced maintenance surface
+
 **Metadata used**:
 - `allFields[].typeByView` — determines which fields are shared and whether types match
 - `allFields[].fieldKind` — enables skip logic for DERIVED/JOINED in write direction
