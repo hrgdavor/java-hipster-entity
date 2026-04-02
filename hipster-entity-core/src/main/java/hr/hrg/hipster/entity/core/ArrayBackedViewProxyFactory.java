@@ -1,8 +1,9 @@
 package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.core.EntityReadArray;
-import hr.hrg.hipster.entity.core.EntityUpdateTrackingArray;
+import hr.hrg.hipster.entity.api.EntityReader;
+import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.ViewMeta;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -15,6 +16,14 @@ public final class ArrayBackedViewProxyFactory {
     private ArrayBackedViewProxyFactory() {
     }
 
+    public static <ID, T extends EntityBase<ID>, V, F extends Enum<F> & FieldDef>
+    V createRead(
+            ViewMeta<V, F> meta,
+            EntityReadArray<ID, T, F> readArray
+    ) {
+        return createRead(meta.viewType(), readArray, meta::forName);
+    }
+
     public static <ID, T extends EntityBase<ID>, F extends Enum<F>, V>
     V createRead(
             Class<V> viewType,
@@ -24,7 +33,7 @@ public final class ArrayBackedViewProxyFactory {
         InvocationHandler handler = new ReadHandler<>(readArray, fieldByMethodName, viewType.getSimpleName() + "Proxy");
         return viewType.cast(Proxy.newProxyInstance(
                 viewType.getClassLoader(),
-                new Class[]{viewType},
+                new Class[]{viewType, EntityReader.class},
                 handler
         ));
     }
@@ -67,6 +76,11 @@ public final class ArrayBackedViewProxyFactory {
         public Object invoke(Object proxy, Method method, Object[] args) {
             if (method.getDeclaringClass() == Object.class) {
                 return handleObjectMethods(proxy, method, args, label);
+            }
+            if (method.getDeclaringClass() == EntityReader.class
+                    && method.getName().equals("get") && method.getParameterCount() == 1
+                    && method.getParameterTypes()[0] == int.class) {
+                return readArray.get((int) args[0]);
             }
             if (method.getParameterCount() != 0) {
                 throw new UnsupportedOperationException("Read proxy supports only zero-arg accessors");

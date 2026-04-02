@@ -85,6 +85,28 @@ Generated string switch is the only supported runtime lookup implementation for 
 - Runtime sorting, fallback binary search, and alternative strategies are not required, to keep generated code minimal and predictable.
 - Optional experimental paths such as first-char prefilter or perfect hash may be explored in separate experimental branches, but they are not part of baseline generator behavior.
 
+## 8. Field metadata iteration alternatives
+
+To keep view serialization/deserialization as lean as possible, we evaluated alternatives for exposing field metadata in `ViewMeta`:
+
+1. enum-backed access (chosen):
+   - `fieldType().getEnumConstants()` + `fieldNameAt(i)/fieldTypeAt(i)`.
+   - no additional copy or cache object per call.
+   - best for JIT and zero-alloc hot loops.
+2. explicit arrays in meta:
+   - `String[] fieldNames()` and `Class<?>[] fieldTypes()` (cached in metadata).
+   - low overhead if stored immutably; but all callers may copy for safety.
+   - adds extra fields in metadata object.
+3. callback iterator:
+   - `forEachField((ordinal, f)->...)` with lambda.
+   - clean, but incurs lambda overhead at call site and may hinder inlining.
+
+## 9. Practical choice
+
+- Implemented `ViewMeta.fieldCount()`, `fieldNameAt(int)`, `fieldTypeAt(int)` backed by `fieldType().getEnumConstants()`.
+- Used in `EntityJacksonMapper` loops with index-based access.
+- Keeps generated and runtime code minimal and consistent with array-backed ordinal semantics.
+
 ## 8. Benchmark plan
 
 Measure generated string switch plus experimental alternatives in a dedicated benchmark class (see section 10). - This is to ensure switch remains optimal as workload and JDKs evolve.

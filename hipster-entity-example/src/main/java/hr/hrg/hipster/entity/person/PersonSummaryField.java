@@ -1,9 +1,22 @@
 package hr.hrg.hipster.entity.person;
 
-import java.util.List;
+import hr.hrg.hipster.entity.api.DefaultViewMeta;
+import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.ViewMeta;
+import hr.hrg.hipster.entity.core.ArrayBackedViewProxyFactory;
+import hr.hrg.hipster.entity.core.EntityReadArray;
+
 import java.util.Map;
 
-public enum PersonSummaryField {
+/**
+ * Field definitions for the {@code PersonSummary} read view.
+ *
+ * <p>Each constant name <strong>must</strong> match the accessor method name on
+ * {@link PersonSummary} exactly — no mapping, same as Java records.
+ * {@code enum.name()} is the field name, always. The ordinal is the positional index
+ * into the backing array: {@code values[field.ordinal()]} holds the field value.</p>
+ */
+public enum PersonSummaryField implements FieldDef {
     id(Long.class),
     firstName(String.class),
     lastName(String.class),
@@ -12,26 +25,21 @@ public enum PersonSummaryField {
     metadata(Map.class);
 
     private final Class<?> javaType;
-    private final String methodName;
 
     PersonSummaryField(Class<?> javaType) {
         this.javaType = javaType;
-        this.methodName = name();
     }
 
+    @Override
     public Class<?> javaType() {
         return javaType;
     }
 
-    public String methodName() {
-        return methodName;
-    }
-
-    public static PersonSummaryField forMethodName(String methodName) {
-        if (methodName == null) {
+    public static PersonSummaryField forName(String name) {
+        if (name == null) {
             return null;
         }
-        return switch (methodName) {
+        return switch (name) {
             case "id" -> id;
             case "firstName" -> firstName;
             case "lastName" -> lastName;
@@ -42,8 +50,17 @@ public enum PersonSummaryField {
         };
     }
 
-    @SuppressWarnings("unchecked")
-    public static Map<String, List<Long>> castMetadata(Object value) {
-        return (Map<String, List<Long>>) value;
-    }
+    public static final ViewMeta<PersonSummary, PersonSummaryField> META = new DefaultViewMeta<>(
+        PersonSummary.class,
+        PersonSummaryField.class,
+        PersonSummaryField::forName,
+        values -> {
+            EntityReadArray<Long, PersonSummary, PersonSummaryField> readArray =
+                    new EntityReadArray<>(PersonSummaryField.class, values);
+            return ArrayBackedViewProxyFactory.createRead(
+                    PersonSummary.class,
+                    readArray,
+                    PersonSummaryField::forName);
+        }
+    );
 }
