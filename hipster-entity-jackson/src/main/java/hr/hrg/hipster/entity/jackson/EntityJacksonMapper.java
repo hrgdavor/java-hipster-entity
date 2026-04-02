@@ -28,7 +28,7 @@ public final class EntityJacksonMapper {
                                                                  EntityReader<?, V, ?> entity,
                                                                  java.io.Writer writer) {
         try (JsonGenerator gen = OBJECT_MAPPER.createGenerator(writer)) {
-            new EntityJacksonViewSerializer().serialize(meta, entity, gen);
+            new EntityJacksonViewSerializer<>(meta).serialize(entity, gen);
             gen.flush();
         } catch (IOException e) {
             throw new IllegalStateException("Failed to serialize entity", e);

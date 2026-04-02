@@ -242,8 +242,10 @@ async function main() {
         : NaN;
     const forksNum = Number(options.forks);
 
+    const jacksonDir = path.join(rootDir, "hipster-entity-jackson");
+
     const bootstrapArgs = [
-        "-pl", "hipster-entity-core",
+        "-pl", "hipster-entity-jackson",
         "-am",
         "-Pjmh",
         "-DskipTests",
@@ -251,6 +253,8 @@ async function main() {
     ];
 
     const compileArgs = [
+        "-pl", "hipster-entity-jackson",
+        "-am",
         "-Pjmh",
         "-DskipTests",
         "clean",
@@ -264,12 +268,12 @@ async function main() {
     await runCommand([maven, ...bootstrapArgs], rootDir);
 
     console.log(`Preparing test classpath with ${path.basename(maven)}...`);
-    await runCommand([maven, ...compileArgs], coreDir);
+    await runCommand([maven, ...compileArgs], rootDir);
 
     const dependencyClasspath = (await readFile(classpathFile, "utf8")).trim();
     const classpathEntries = [
-        path.join(coreDir, "target", "test-classes"),
-        path.join(coreDir, "target", "classes")
+        path.join(jacksonDir, "target", "test-classes"),
+        path.join(jacksonDir, "target", "classes")
     ];
     if (dependencyClasspath.length > 0) classpathEntries.push(dependencyClasspath);
     const effectiveClasspath = classpathEntries.join(path.delimiter);
@@ -283,19 +287,19 @@ async function main() {
         console.warn("Warning: current run uses short warmup/fork settings; JIT inlining may not be fully stabilized.");
     }
 
-    const generatedSourcesDir = path.join(coreDir, "target", "generated-test-sources", "test-annotations");
+    const generatedSourcesDir = path.join(jacksonDir, "target", "generated-test-sources", "test-annotations");
     const generatedJavaFiles = await collectJavaFiles(generatedSourcesDir);
     if (generatedJavaFiles.length > 0) {
         console.log(`Recompiling ${generatedJavaFiles.length} JMH generated sources with ${path.basename(javac)}...`);
         await runCommand([
             javac,
             "-cp", effectiveClasspath,
-            "-d", path.join(coreDir, "target", "test-classes"),
+            "-d", path.join(jacksonDir, "target", "test-classes"),
             ...generatedJavaFiles
-        ], coreDir);
+        ], jacksonDir);
     }
     console.log(`Results file: ${resultFile}`);
-    await runCommand([java, "-cp", effectiveClasspath, "org.openjdk.jmh.Main", ...jmhArgs], coreDir);
+    await runCommand([java, "-cp", effectiveClasspath, "org.openjdk.jmh.Main", ...jmhArgs], jacksonDir);
 
     const jsonText = await readFile(resultFile, "utf8");
     const results = JSON.parse(jsonText);

@@ -15,11 +15,11 @@ public final class EntityJacksonViewJsonSerializer<V extends EntityBase<?>, F ex
 
     private final ViewMeta<V, F> meta;
 
-    private final EntityJacksonViewSerializer serializer;
+    private final EntityJacksonViewSerializer<V, F> serializer;
 
     public EntityJacksonViewJsonSerializer(ViewMeta<V, F> meta) {
         this.meta = meta;
-        this.serializer = new EntityJacksonViewSerializer();
+        this.serializer = new EntityJacksonViewSerializer<>(meta);
     }
 
     @Override
@@ -29,6 +29,6 @@ public final class EntityJacksonViewJsonSerializer<V extends EntityBase<?>, F ex
         }
         @SuppressWarnings("unchecked")
         EntityReader<?, V, ?> typedReader = (EntityReader<?, V, ?>) reader;
-        serializer.serialize(meta, typedReader, gen);
+        serializer.serialize(typedReader, gen);
     }
 }
