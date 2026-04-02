@@ -98,6 +98,12 @@ Runner:
 
 - `scripts/run-jmh.js`
 
+## Quick local commands
+
+- `bun run scripts/run-jmh.js --include ".*EEnumSetJmhBenchmark.*"`
+- `bun run scripts/run-jmh.js --include ".*EEnumSetTrackingJmhBenchmark.*"`
+- `mvnd -pl hipster-entity-core test` (unit test + smoke check)
+
 ## Inlining-oriented benchmark profile
 
 The default runner profile is tuned to allow JIT inlining stabilization:

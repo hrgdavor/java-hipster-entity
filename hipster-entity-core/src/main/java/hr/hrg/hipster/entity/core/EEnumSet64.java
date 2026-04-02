@@ -163,7 +163,18 @@ public final class EEnumSet64<E extends Enum<E>> implements EEnumSet<E>{
 
 	@Override
 	public boolean equals(Object o) {
-		return EEnumSetUtils.equals(this, o);
+		if (this == o) return true;
+		if (!(o instanceof EEnumSetRead<?> other)) return false;
+		if (!Objects.equals(enumClass, other.getEnumClass())) return false;
+		if (other.getSegmentCount() > 1) return false;
+
+		if (other instanceof EEnumSet64<?> e64) {
+			return bits0 == e64.bits0;
+		}
+		if (other instanceof EEnumSetBuilder64<?> b64) {
+			return bits0 == b64.rawBits0();
+		}
+		return bits0 == other.getBits0();
 	}
 
 	@Override

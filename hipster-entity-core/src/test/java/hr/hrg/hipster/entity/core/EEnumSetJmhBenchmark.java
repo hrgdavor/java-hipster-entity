@@ -68,4 +68,72 @@ public class EEnumSetJmhBenchmark {
     public boolean hasAll96() {
         return b96a.hasAll(b96b);
     }
+
+    @Benchmark
+    public EEnumSet<E64> builder64ToImmutable() {
+        // copy builder each time to avoid modifying canonical state
+        EEnumSetBuilder<E64> copy = EEnumSetBuilder.create(E64.class);
+        copy.addAll(b64a);
+        return copy.toImmutable();
+    }
+
+    @Benchmark
+    public EEnumSet<E96> builder96ToImmutable() {
+        EEnumSetBuilder<E96> copy = EEnumSetBuilder.create(E96.class);
+        copy.addAll(b96a);
+        return copy.toImmutable();
+    }
+
+    @Benchmark
+    public EEnumSetBuilder<E64> allToBuilder64() {
+        return new EEnumSetAll<>(E64.class).toBuilder();
+    }
+
+    @Benchmark
+    public EEnumSetBuilder<E96> allToBuilder96() {
+        return new EEnumSetAll<>(E96.class).toBuilder();
+    }
+
+    @Benchmark
+    public EEnumSetBuilder<E64> builder64AddRemove() {
+        EEnumSetBuilder<E64> temp = EEnumSetBuilder.create(E64.class);
+        for (int i = 0; i < 64; i++) {
+            temp.addOrdinal(i);
+        }
+        for (int i = 0; i < 64; i += 2) {
+            temp.removeOrdinal(i);
+        }
+        return temp;
+    }
+
+    @Benchmark
+    public EEnumSetBuilder<E96> builder96AddRemove() {
+        EEnumSetBuilder<E96> temp = EEnumSetBuilder.create(E96.class);
+        for (int i = 0; i < 96; i++) {
+            temp.addOrdinal(i);
+        }
+        for (int i = 0; i < 96; i += 2) {
+            temp.removeOrdinal(i);
+        }
+        return temp;
+    }
+
+    @Benchmark
+    public void builder64Clear() {
+        EEnumSetBuilder<E64> temp = EEnumSetBuilder.create(E64.class);
+        for (int i = 0; i < 64; i++) {
+            temp.addOrdinal(i);
+        }
+        temp.clear();
+    }
+
+    @Benchmark
+    public void builder96Clear() {
+        EEnumSetBuilder<E96> temp = EEnumSetBuilder.create(E96.class);
+        for (int i = 0; i < 96; i++) {
+            temp.addOrdinal(i);
+        }
+        temp.clear();
+    }
 }
+

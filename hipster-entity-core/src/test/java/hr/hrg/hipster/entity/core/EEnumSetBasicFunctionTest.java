@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EEnumSetBasicFunctionTest {
@@ -254,16 +256,130 @@ class EEnumSetBasicFunctionTest {
     }
 
     @Test
-    void setWithEnumOverloadSupportsNoOpsAndNull() {
+    void toArrayWithDifferentInputSizesBehavesLikeCollectionToArray() {
+        EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+        builder.add(EnumTestUtil.Enum64.E01);
+        builder.add(EnumTestUtil.Enum64.E02);
+
+        EEnumSet<EnumTestUtil.Enum64> immutable = builder.toImmutable();
+
+        EnumTestUtil.Enum64[] tooSmall = immutable.toArray(new EnumTestUtil.Enum64[1]);
+        assertArrayEquals(new EnumTestUtil.Enum64[]{EnumTestUtil.Enum64.E01, EnumTestUtil.Enum64.E02}, tooSmall);
+
+        EnumTestUtil.Enum64[] exact = immutable.toArray(new EnumTestUtil.Enum64[2]);
+        assertArrayEquals(new EnumTestUtil.Enum64[]{EnumTestUtil.Enum64.E01, EnumTestUtil.Enum64.E02}, exact);
+
+        EnumTestUtil.Enum64[] tooLarge = immutable.toArray(new EnumTestUtil.Enum64[4]);
+        assertArrayEquals(new EnumTestUtil.Enum64[]{EnumTestUtil.Enum64.E01, EnumTestUtil.Enum64.E02, null, null}, tooLarge);
+    }
+
+    @Test
+    void enumSetAllBehaviour() {
+        EEnumSet<EnumTestUtil.Enum64> all = new EEnumSetAll<>(EnumTestUtil.Enum64.class);
+        EEnumSetBuilder<EnumTestUtil.Enum64> someBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+        someBuilder.add(EnumTestUtil.Enum64.E05);
+        EEnumSet<EnumTestUtil.Enum64> some = someBuilder.toImmutable();
+
+        assertEquals(EnumTestUtil.Enum64.values().length, all.size());
+        assertTrue(all.has(EnumTestUtil.Enum64.E00));
+        assertTrue(all.hasAny(some));
+        assertTrue(all.hasAll(some));
+        assertTrue(all.hasAll(all));
+
+        EEnumSet<EnumTestUtil.Enum64> allBuilderSnapshot = all.toBuilder().toImmutable();
+        assertEquals(all, allBuilderSnapshot);
+    }
+
+    @Test
+    void enumSetEmptyBehaviour() {
+        EEnumSet<EnumTestUtil.Enum64> empty = new EEnumSetEmpty<>(EnumTestUtil.Enum64.class);
+        assertTrue(empty.isEmpty());
+
+        EEnumSetBuilder<EnumTestUtil.Enum64> nonEmptyBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+        nonEmptyBuilder.add(EnumTestUtil.Enum64.E00);
+        assertFalse(empty.hasAny(nonEmptyBuilder.toImmutable()));
+
+        EEnumSet<EnumTestUtil.Enum64> emptyFromBuilder = empty.toBuilder().toImmutable();
+        assertInstanceOf(EEnumSetEmpty.class, emptyFromBuilder);
+        assertTrue(emptyFromBuilder.hasAll(empty));
+        assertFalse(emptyFromBuilder.hasAny(empty));
+    }
+
+    @Test
+    void immutableRoundTripDoesNotMutateOriginal() {
+        EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+        builder.add(EnumTestUtil.Enum64.E10);
+        EEnumSet<EnumTestUtil.Enum64> immutable = builder.toImmutable();
+
+        EEnumSetBuilder<EnumTestUtil.Enum64> roundBuilder = immutable.toBuilder();
+        roundBuilder.remove(EnumTestUtil.Enum64.E10);
+
+        assertTrue(immutable.has(EnumTestUtil.Enum64.E10));
+        assertFalse(roundBuilder.has(EnumTestUtil.Enum64.E10));
+    }
+
+    @Test
+    void copyOfReadVariantPaths() {
+        EEnumSet<EnumTestUtil.Enum64> empty = EEnumSetEmpty.of(EnumTestUtil.Enum64.class);
+        assertSame(empty, EEnumSet.copyOf(empty));
+
+        EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+        builder.add(EnumTestUtil.Enum64.E03);
+        EEnumSet<EnumTestUtil.Enum64> snapshot = EEnumSet.copyOf(builder);
+        assertEquals(1, snapshot.size());
+        assertTrue(snapshot.has(EnumTestUtil.Enum64.E03));
+    }
+
+    @Test
+    void toListAndToEnumSetReturnOrderedValues() {
         EEnumSetBuilder<EnumTestUtil.Enum65> builder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
+        builder.add(EnumTestUtil.Enum65.E01);
+        builder.add(EnumTestUtil.Enum65.E03);
+        EEnumSet<EnumTestUtil.Enum65> set = builder.toImmutable();
 
-        assertTrue(builder.set(EnumTestUtil.Enum65.E64, true));
-        assertFalse(builder.set(EnumTestUtil.Enum65.E64, true));
+        assertEquals(List.of(EnumTestUtil.Enum65.E01, EnumTestUtil.Enum65.E03), set.toList());
+        assertEquals(EnumSet.of(EnumTestUtil.Enum65.E01, EnumTestUtil.Enum65.E03), set.toEnumSet());
+    }
 
-        assertTrue(builder.set(EnumTestUtil.Enum65.E64, false));
-        assertFalse(builder.set(EnumTestUtil.Enum65.E64, false));
+    @Test
+    void hasAnyAndHasAllWithNullAndCrossClassReturnFalse() {
+        EEnumSetBuilder<EnumTestUtil.Enum64> tempBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+        tempBuilder.add(EnumTestUtil.Enum64.E01);
+        EEnumSet<EnumTestUtil.Enum64> set = tempBuilder.toImmutable();
 
-        assertFalse(builder.set((EnumTestUtil.Enum65) null, true));
-        assertFalse(builder.set((EnumTestUtil.Enum65) null, false));
+        assertFalse(set.hasAny(null));
+        assertFalse(set.hasAll(null));
+    }
+
+    @Test
+    void setOpsRejectDifferentEnumClass() {
+        EEnumSetBuilder<EnumTestUtil.Enum64> b64 = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+        b64.add(EnumTestUtil.Enum64.E00);
+        EEnumSet<EnumTestUtil.Enum64> a64 = b64.toImmutable();
+
+        EEnumSetBuilder<EnumTestUtil.Enum65> b65 = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
+        b65.add(EnumTestUtil.Enum65.E00);
+        EEnumSet<EnumTestUtil.Enum65> a65 = b65.toImmutable();
+
+        assertFalse(a64.hasAny((EEnumSetRead<EnumTestUtil.Enum64>) (Object) a65));
+        assertFalse(a64.hasAll((EEnumSetRead<EnumTestUtil.Enum64>) (Object) a65));
+
+        IllegalArgumentException e1 = assertThrows(IllegalArgumentException.class, () -> a64.union((EEnumSetRead<EnumTestUtil.Enum64>) (Object) a65));
+        assertEquals("enum class mismatch or null", e1.getMessage());
+    }
+
+    @Test
+    void largeEnumToArrayAndToEnumSetConsistency() {
+        EEnumSetBuilder<EnumTestUtil.Enum65> builder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
+        builder.add(EnumTestUtil.Enum65.E01);
+        builder.add(EnumTestUtil.Enum65.E64);
+        builder.add(EnumTestUtil.Enum65.E63);
+
+        EEnumSet<EnumTestUtil.Enum65> immutable = builder.toImmutable();
+        EnumTestUtil.Enum65[] ary = immutable.toArray(new EnumTestUtil.Enum65[0]);
+        assertArrayEquals(new EnumTestUtil.Enum65[]{EnumTestUtil.Enum65.E01, EnumTestUtil.Enum65.E63, EnumTestUtil.Enum65.E64}, ary);
+
+        assertEquals(EnumSet.of(EnumTestUtil.Enum65.E01, EnumTestUtil.Enum65.E63, EnumTestUtil.Enum65.E64), immutable.toEnumSet());
     }
 }
+
