@@ -1,7 +1,6 @@
-package hr.hrg.hipster.entity.example;
+package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.core.EEnumSet;
 import hr.hrg.hipster.entity.core.EntityReadArray;
 import hr.hrg.hipster.entity.core.EntityUpdateTrackingArray;
 
