@@ -15,16 +15,16 @@ class EEnumSetImmutableBehaviorTest {
     @Test
     void immutable64HasAnyAndHasAllAgainstBuilderAndImmutable() {
         EEnumSetBuilder<EnumTestUtil.Enum64> leftBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
-        leftBuilder.mark(EnumTestUtil.Enum64.E01);
-        leftBuilder.mark(EnumTestUtil.Enum64.E10);
+        leftBuilder.add(EnumTestUtil.Enum64.E01);
+        leftBuilder.add(EnumTestUtil.Enum64.E10);
         EEnumSet<EnumTestUtil.Enum64> left = leftBuilder.toImmutable();
 
         EEnumSetBuilder<EnumTestUtil.Enum64> subsetBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
-        subsetBuilder.mark(EnumTestUtil.Enum64.E10);
+        subsetBuilder.add(EnumTestUtil.Enum64.E10);
         EEnumSet<EnumTestUtil.Enum64> subset = subsetBuilder.toImmutable();
 
         EEnumSetBuilder<EnumTestUtil.Enum64> disjointBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
-        disjointBuilder.mark(EnumTestUtil.Enum64.E63);
+        disjointBuilder.add(EnumTestUtil.Enum64.E63);
         EEnumSet<EnumTestUtil.Enum64> disjoint = disjointBuilder.toImmutable();
 
         assertTrue(left.hasAny(subsetBuilder));
@@ -41,16 +41,16 @@ class EEnumSetImmutableBehaviorTest {
     @Test
     void immutableLargeHasAnyAndHasAllAcrossSegments() {
         EEnumSetBuilder<EnumTestUtil.Enum65> leftBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
-        leftBuilder.mark(EnumTestUtil.Enum65.E00);
-        leftBuilder.mark(EnumTestUtil.Enum65.E64);
+        leftBuilder.add(EnumTestUtil.Enum65.E00);
+        leftBuilder.add(EnumTestUtil.Enum65.E64);
         EEnumSet<EnumTestUtil.Enum65> left = leftBuilder.toImmutable();
 
         EEnumSetBuilder<EnumTestUtil.Enum65> subsetBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
-        subsetBuilder.mark(EnumTestUtil.Enum65.E64);
+        subsetBuilder.add(EnumTestUtil.Enum65.E64);
         EEnumSet<EnumTestUtil.Enum65> subset = subsetBuilder.toImmutable();
 
         EEnumSetBuilder<EnumTestUtil.Enum65> disjointBuilder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
-        disjointBuilder.mark(EnumTestUtil.Enum65.E63);
+        disjointBuilder.add(EnumTestUtil.Enum65.E63);
         EEnumSet<EnumTestUtil.Enum65> disjoint = disjointBuilder.toImmutable();
 
         assertTrue(left.hasAny(subsetBuilder));
@@ -77,16 +77,16 @@ class EEnumSetImmutableBehaviorTest {
 
         EEnumSetBuilder<EnumTestUtil.Enum64> fromEmpty = empty.toBuilder();
         assertTrue(fromEmpty.isEmpty());
-        assertTrue(fromEmpty.mark(EnumTestUtil.Enum64.E00));
+        assertTrue(fromEmpty.add(EnumTestUtil.Enum64.E00));
         assertTrue(fromEmpty.has(EnumTestUtil.Enum64.E00));
     }
 
     @Test
     void immutable64ForEachReturnsMarkedOrdinalsInAscendingOrder() {
         EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
-        builder.mark(EnumTestUtil.Enum64.E63);
-        builder.mark(EnumTestUtil.Enum64.E01);
-        builder.mark(EnumTestUtil.Enum64.E10);
+        builder.add(EnumTestUtil.Enum64.E63);
+        builder.add(EnumTestUtil.Enum64.E01);
+        builder.add(EnumTestUtil.Enum64.E10);
         EEnumSet<EnumTestUtil.Enum64> immutable = builder.toImmutable();
 
         List<EnumTestUtil.Enum64> visited = new ArrayList<>();
@@ -99,7 +99,7 @@ class EEnumSetImmutableBehaviorTest {
     @Test
     void immutableLargeSegmentMetadataAndHasBounds() {
         EEnumSetBuilder<EnumTestUtil.Enum65> builder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
-        builder.mark(EnumTestUtil.Enum65.E64);
+        builder.add(EnumTestUtil.Enum65.E64);
         EEnumSet<EnumTestUtil.Enum65> immutable = builder.toImmutable();
 
         assertEquals(2, immutable.getSegmentCount());
@@ -111,9 +111,9 @@ class EEnumSetImmutableBehaviorTest {
     @Test
     void immutableToBuilderRoundTripWorksForLargeSet() {
         EEnumSetBuilder<EnumTestUtil.Enum65> builder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
-        builder.mark(EnumTestUtil.Enum65.E00);
-        builder.mark(EnumTestUtil.Enum65.E33);
-        builder.mark(EnumTestUtil.Enum65.E64);
+        builder.add(EnumTestUtil.Enum65.E00);
+        builder.add(EnumTestUtil.Enum65.E33);
+        builder.add(EnumTestUtil.Enum65.E64);
 
         EEnumSet<EnumTestUtil.Enum65> immutable = builder.toImmutable();
         EEnumSetBuilder<EnumTestUtil.Enum65> roundTrip = immutable.toBuilder();
@@ -127,12 +127,12 @@ class EEnumSetImmutableBehaviorTest {
     @Test
     void immutable64SnapshotIsNotAffectedByFurtherBuilderMutations() {
         EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
-        builder.mark(EnumTestUtil.Enum64.E01);
+        builder.add(EnumTestUtil.Enum64.E01);
 
         EEnumSet<EnumTestUtil.Enum64> snapshot = builder.toImmutable();
 
-        builder.mark(EnumTestUtil.Enum64.E02);
-        builder.unmark(EnumTestUtil.Enum64.E01);
+        builder.add(EnumTestUtil.Enum64.E02);
+        builder.remove(EnumTestUtil.Enum64.E01);
 
         assertTrue(snapshot.has(EnumTestUtil.Enum64.E01));
         assertFalse(snapshot.has(EnumTestUtil.Enum64.E02));
@@ -142,12 +142,12 @@ class EEnumSetImmutableBehaviorTest {
     @Test
     void immutableLargeSnapshotIsNotAffectedByFurtherBuilderMutations() {
         EEnumSetBuilder<EnumTestUtil.Enum65> builder = EEnumSetBuilder.create(EnumTestUtil.Enum65.class);
-        builder.mark(EnumTestUtil.Enum65.E64);
+        builder.add(EnumTestUtil.Enum65.E64);
 
         EEnumSet<EnumTestUtil.Enum65> snapshot = builder.toImmutable();
 
-        builder.unmark(EnumTestUtil.Enum65.E64);
-        builder.mark(EnumTestUtil.Enum65.E00);
+        builder.remove(EnumTestUtil.Enum65.E64);
+        builder.add(EnumTestUtil.Enum65.E00);
 
         assertTrue(snapshot.has(EnumTestUtil.Enum65.E64));
         assertFalse(snapshot.has(EnumTestUtil.Enum65.E00));

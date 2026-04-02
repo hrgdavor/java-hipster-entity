@@ -1,27 +1,31 @@
 package hr.hrg.hipster.entity.core;
 
-import java.io.StringWriter;
 import java.util.List;
+import java.util.Objects;
 
 @SuppressWarnings("unchecked")
 public final class EEnumSet64<E extends Enum<E>> implements EEnumSet<E>{
 
-	protected long bits0;
-	protected int size;
-	protected E[] universe;
-    private Class<E> enumClass;
+	private final long bits0;
+	private final int size;
+	private final E[] universe;
+    private final Class<E> enumClass;
 
-    protected EEnumSet64(Class<E> enumClass, E ...values){
+	EEnumSet64(Class<E> enumClass, E ...values){
 		universe = (E[])enumClass.getEnumConstants();
         this.enumClass = enumClass;
 		ensureSupportedUniverseSize();
+        long bits = 0L;
+        int count = 0;
         for(E en:values) {
 			int ordinal = en.ordinal();
-			if(!has(ordinal)) {
-				size++;
-				setTrue(ordinal);
+			if((bits & (1L << ordinal)) == 0) {
+				count++;
+				bits |= (1L << ordinal);
 			}
 		}
+        this.bits0 = bits;
+        this.size = count;
 	}
 
 	/**
@@ -39,17 +43,21 @@ public final class EEnumSet64<E extends Enum<E>> implements EEnumSet<E>{
 		this.size = size;
 	}
 	
-	protected EEnumSet64(Class<E> enumClass,List<E> values){
+	EEnumSet64(Class<E> enumClass,List<E> values){
 		this.enumClass = enumClass;
 		universe = (E[])enumClass.getEnumConstants();
 		ensureSupportedUniverseSize();
+		long bits = 0L;
+		int count = 0;
 		for(E en:values) {
 			int ordinal = en.ordinal();
-			if(!has(ordinal)) {
-				size++;
-				setTrue(ordinal);
+			if((bits & (1L << ordinal)) == 0) {
+				count++;
+				bits |= (1L << ordinal);
 			}
 		}
+		this.bits0 = bits;
+		this.size = count;
 	}
 
 	private void ensureSupportedUniverseSize() {
@@ -57,19 +65,6 @@ public final class EEnumSet64<E extends Enum<E>> implements EEnumSet<E>{
 			throw new IllegalArgumentException("EEnumSet64 requires enum with at most 64 values, got " + universe.length);
 		}
 	}
-	
-	private void setTrue(int ordinal) {
-		this.bits0 |= (1L<<ordinal);		
-	}
-		
-	void setAll(boolean value) {
-		if (value) {
-			bits0 = -1L;// -1 is all bits true (111111....11111)
-		} else {
-			bits0 = 0;
-		}
-	}
-
 	@Override public long getBits0()  { return bits0; }
 	@Override public long getBits(int index)  { return  index == 0 ? bits0 : 0L; }
 
@@ -91,6 +86,9 @@ public final class EEnumSet64<E extends Enum<E>> implements EEnumSet<E>{
 		
 	@Override
 	public boolean hasAll(EEnumSetRead<E> other) {
+		if (other == null || !Objects.equals(enumClass, other.getEnumClass())) {
+			return false;
+		}
 		if(other instanceof EEnumSet64<?> e64) {
 			long ob = e64.bits0;
 			return (bits0 & ob) == ob;
@@ -105,8 +103,11 @@ public final class EEnumSet64<E extends Enum<E>> implements EEnumSet<E>{
 
 	@Override
 	public boolean hasAny(EEnumSetRead<E> other) {
-		if(other instanceof EEnumSet64<?> e64) return (bits0 & e64.bits0) != 0;
-		if(other instanceof EEnumSetBuilder64<?> b64) return (bits0 & b64.rawBits0()) != 0;
+		if (other == null || !Objects.equals(enumClass, other.getEnumClass())) {
+			return false;
+		}
+		if (other instanceof EEnumSet64<?> e64) return (bits0 & e64.bits0) != 0;
+		if (other instanceof EEnumSetBuilder64<?> b64) return (bits0 & b64.rawBits0()) != 0;
 		return (bits0 & other.getBits0()) != 0;
 	}
 
@@ -116,28 +117,58 @@ public final class EEnumSet64<E extends Enum<E>> implements EEnumSet<E>{
 	}
 
 	@Override
-	public E get(int index) {
-		return universe[index];
-	}
-
-	@Override
 	public String toString() {
-		StringWriter sw = new StringWriter();
-		sw.append('[');
-		for(int i=0; i<size; i++) {
-			if(i>0) sw.append(',');
-			sw.append(universe[i].toString());
+		StringBuilder sb = new StringBuilder(size * 8);
+		sb.append('[');
+		int idx = 0;
+		long remaining = bits0;
+		while (remaining != 0) {
+			if (idx > 0) sb.append(',');
+			int ordinal = Long.numberOfTrailingZeros(remaining);
+			sb.append(universe[ordinal].toString());
+			remaining &= (remaining - 1);
+			idx++;
 		}
-		sw.append(']');
-		return sw.toString();
+		sb.append(']');
+		return sb.toString();
 	}
 	
 	@Override
-	public void forEach(ForEach<E> callback) {
+	public void forEach(java.util.function.ObjIntConsumer<E> callback) {
+		if (callback == null) return;
+		long remaining = bits0;
 		int idx = 0;
-		for(int i=0; i<universe.length; i++){
-			if(has(i)) callback.next(universe[i],idx++);
+		while (remaining != 0) {
+			int ordinal = Long.numberOfTrailingZeros(remaining);
+			callback.accept(universe[ordinal], idx++);
+			remaining &= (remaining - 1);
 		}
+	}
+
+	@Override
+	public void forEach(java.util.function.Consumer<E> callback) {
+		if (callback == null) return;
+		long remaining = bits0;
+		while (remaining != 0) {
+			int ordinal = Long.numberOfTrailingZeros(remaining);
+			callback.accept(universe[ordinal]);
+			remaining &= (remaining - 1);
+		}
+	}
+
+	@Override
+	public Class<E> getEnumClass() {
+		return enumClass;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		return EEnumSetUtils.equals(this, o);
+	}
+
+	@Override
+	public int hashCode() {
+		return EEnumSetUtils.hashCode(this);
 	}
 
 	@Override

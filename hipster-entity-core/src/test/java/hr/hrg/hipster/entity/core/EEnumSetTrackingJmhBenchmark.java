@@ -114,7 +114,7 @@ public class EEnumSetTrackingJmhBenchmark {
         @Setup(Level.Invocation)
         public void fill() {
             concrete.clear();
-            for (int i = 0; i < 64; i += 2) concrete.mark(i);
+            for (int i = 0; i < 64; i += 2) concrete.addOrdinal(i);
         }
     }
 
@@ -132,7 +132,7 @@ public class EEnumSetTrackingJmhBenchmark {
         @Setup(Level.Invocation)
         public void fill() {
             concrete.clear();
-            for (int i = 0; i < 96; i += 2) concrete.mark(i);
+            for (int i = 0; i < 96; i += 2) concrete.addOrdinal(i);
         }
     }
 
@@ -180,22 +180,22 @@ public class EEnumSetTrackingJmhBenchmark {
 
     @Benchmark
     public boolean markUnmark64ConcreteBuilder(Builder64State state) {
-        return state.concrete.mark(state.ordinal) && state.concrete.unmark(state.ordinal);
+        return state.concrete.addOrdinal(state.ordinal) && state.concrete.removeOrdinal(state.ordinal);
     }
 
     @Benchmark
     public boolean markUnmark64InterfaceBuilder(Builder64State state) {
-        return state.generic.mark(state.ordinal) && state.generic.unmark(state.ordinal);
+        return state.generic.addOrdinal(state.ordinal) && state.generic.removeOrdinal(state.ordinal);
     }
 
     @Benchmark
     public boolean markUnmark96ConcreteBuilder(Builder96State state) {
-        return state.concrete.mark(state.ordinal) && state.concrete.unmark(state.ordinal);
+        return state.concrete.addOrdinal(state.ordinal) && state.concrete.removeOrdinal(state.ordinal);
     }
 
     @Benchmark
     public boolean markUnmark96InterfaceBuilder(Builder96State state) {
-        return state.generic.mark(state.ordinal) && state.generic.unmark(state.ordinal);
+        return state.generic.addOrdinal(state.ordinal) && state.generic.removeOrdinal(state.ordinal);
     }
 
     @Benchmark

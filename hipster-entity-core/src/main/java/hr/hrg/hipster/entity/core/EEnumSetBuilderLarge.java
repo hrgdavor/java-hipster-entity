@@ -1,5 +1,7 @@
 package hr.hrg.hipster.entity.core;
 
+import java.util.Objects;
+
 @SuppressWarnings("unchecked")
 public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBuilder<E> {
 
@@ -11,13 +13,13 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
     public EEnumSetBuilderLarge(Class<E> enumClass) {
         this.enumClass = enumClass;
         this.universe = (E[]) enumClass.getEnumConstants();
-        this.bits = new long[(universe.length / 64) + 1];
+        this.bits = new long[(universe.length + 63) / 64];
     }
 
     public EEnumSetBuilderLarge(Class<E> enumClass, long[] sourceBits, int size) {
         this.enumClass = enumClass;
         this.universe = (E[]) enumClass.getEnumConstants();
-        this.bits = new long[(universe.length / 64) + 1];
+        this.bits = new long[(universe.length + 63) / 64];
         int limit = Math.min(this.bits.length, sourceBits.length);
         for (int i = 0; i < limit; i++) this.bits[i] = sourceBits[i];
         this.size = size;
@@ -40,10 +42,7 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
 
     @Override
     public boolean isEmpty() {
-        for (long bit : bits) {
-            if (bit != 0) return false;
-        }
-        return true;
+        return size == 0;
     }
 
     @Override
@@ -60,17 +59,21 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
 
     @Override
     public boolean hasAny(EEnumSetRead<E> other) {
+        if (other == null || !Objects.equals(enumClass, other.getEnumClass())) {
+            return false;
+        }
         if (other instanceof EEnumSetBuilderLarge<?> bl) {
             long[] otherBits = bl.rawBits();
-            for (int i = 0; i < bits.length; i++) {
+            int len = Math.min(bits.length, otherBits.length);
+            for (int i = 0; i < len; i++) {
                 if ((bits[i] & otherBits[i]) != 0) return true;
             }
             return false;
         }
         if (other instanceof EEnumSetLarge<?> el) {
-            long[] otherBits = el.bits;
-            for (int i = 0; i < bits.length; i++) {
-                if ((bits[i] & otherBits[i]) != 0) return true;
+            int len = Math.min(bits.length, el.getSegmentCount());
+            for (int i = 0; i < len; i++) {
+                if ((bits[i] & el.getBits(i)) != 0) return true;
             }
             return false;
         }
@@ -91,18 +94,22 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
 
     @Override
     public boolean hasAll(EEnumSetRead<E> other) {
+        if (other == null || !Objects.equals(enumClass, other.getEnumClass())) {
+            return false;
+        }
         if (other instanceof EEnumSetBuilderLarge<?> bl) {
             long[] otherBits = bl.rawBits();
-            for (int i = 0; i < bits.length; i++) {
+            int len = Math.min(bits.length, otherBits.length);
+            for (int i = 0; i < len; i++) {
                 long ob = otherBits[i];
                 if ((bits[i] & ob) != ob) return false;
             }
             return true;
         }
         if (other instanceof EEnumSetLarge<?> el) {
-            long[] otherBits = el.bits;
-            for (int i = 0; i < bits.length; i++) {
-                long ob = otherBits[i];
+            int len = Math.min(bits.length, el.getSegmentCount());
+            for (int i = 0; i < len; i++) {
+                long ob = el.getBits(i);
                 if ((bits[i] & ob) != ob) return false;
             }
             return true;
@@ -129,41 +136,131 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
     }
 
     @Override
+    public EEnumSetBuilder<E> addAll(E ... values) {
+        for (E value : values) {
+            if (value != null) {
+                add(value);
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public EEnumSetBuilder<E> removeAll(E ... values) {
+        for (E value : values) {
+            if (value != null) {
+                remove(value);
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public EEnumSetBuilder<E> addAll(Iterable<E> values) {
+        if (values != null) {
+            for (E value : values) {
+                if (value != null) {
+                    add(value);
+                }
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public EEnumSetBuilder<E> removeAll(Iterable<E> values) {
+        if (values != null) {
+            for (E value : values) {
+                if (value != null) {
+                    remove(value);
+                }
+            }
+        }
+        return this;
+    }
+
+    @Override
     public int size() {
         return size;
     }
 
     @Override
-    public E get(int index) {
-        if (index < 0 || index >= size) throw new IndexOutOfBoundsException("Index: " + index + ", size: " + size);
-        int seen = 0;
-        for (int segment = 0; segment < bits.length; segment++) {
-            long remaining = bits[segment];
-            while (remaining != 0) {
-                int offset = Long.numberOfTrailingZeros(remaining);
-                if (seen == index) return universe[(segment * 64) + offset];
-                remaining &= (remaining - 1);
-                seen++;
-            }
-        }
-        throw new IllegalStateException("Internal bit count mismatch");
-    }
-
-    @Override
-    public void forEach(ForEach<E> callback) {
+    public void forEach(java.util.function.ObjIntConsumer<E> callback) {
+        if (callback == null) return;
         int idx = 0;
         for (int segment = 0; segment < bits.length; segment++) {
             long remaining = bits[segment];
             while (remaining != 0) {
                 int offset = Long.numberOfTrailingZeros(remaining);
-                callback.next(universe[(segment * 64) + offset], idx++);
+                callback.accept(universe[(segment * 64) + offset], idx++);
                 remaining &= (remaining - 1);
             }
         }
     }
 
     @Override
-    public boolean mark(int ordinal) {
+    public void forEach(java.util.function.Consumer<E> callback) {
+        if (callback == null) return;
+        for (int segment = 0; segment < bits.length; segment++) {
+            long remaining = bits[segment];
+            while (remaining != 0) {
+                int offset = Long.numberOfTrailingZeros(remaining);
+                callback.accept(universe[(segment * 64) + offset]);
+                remaining &= (remaining - 1);
+            }
+        }
+    }
+
+    @Override
+    public EEnumSetBuilder<E> addAll(EEnumSetRead<E> other) {
+        if (other == null || !Objects.equals(enumClass, other.getEnumClass())) return this;
+
+        for (int i = 0; i < bits.length; i++) {
+            long oldBits = bits[i];
+            long otherBits = other.getBits(i);
+            long combined = oldBits | otherBits;
+            bits[i] = combined;
+            size += Long.bitCount(combined) - Long.bitCount(oldBits);
+        }
+
+        return this;
+    }
+
+    @Override
+    public EEnumSetBuilder<E> removeAll(EEnumSetRead<E> other) {
+        if (other == null || !Objects.equals(enumClass, other.getEnumClass())) return this;
+
+        int delta = 0;
+        for (int i = 0; i < bits.length; i++) {
+            long oldBits = bits[i];
+            long otherBits = other.getBits(i);
+            long newBits = oldBits & ~otherBits;
+            bits[i] = newBits;
+            delta += Long.bitCount(newBits) - Long.bitCount(oldBits);
+        }
+        size += delta;
+
+        return this;
+    }
+
+    @Override
+    public EEnumSetBuilder<E> retainAll(EEnumSetRead<E> other) {
+        if (other == null || !Objects.equals(enumClass, other.getEnumClass())) {
+            clear();
+            return this;
+        }
+
+        int newSize = 0;
+        for (int i = 0; i < bits.length; i++) {
+            bits[i] &= other.getBits(i);
+            newSize += Long.bitCount(bits[i]);
+        }
+        size = newSize;
+        return this;
+    }
+
+    @Override
+    public boolean addOrdinal(int ordinal) {
         if (ordinal < 0 || ordinal >= universe.length) return false;
         int segment = ordinal / 64;
         long mask = 1L << (ordinal & 63);
@@ -174,12 +271,12 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
     }
 
     @Override
-    public boolean mark(E value) {
-        return value != null && mark(value.ordinal());
+    public boolean add(E value) {
+        return value != null && addOrdinal(value.ordinal());
     }
 
     @Override
-    public boolean unmark(int ordinal) {
+    public boolean removeOrdinal(int ordinal) {
         if (ordinal < 0 || ordinal >= universe.length) return false;
         int segment = ordinal / 64;
         long mask = 1L << (ordinal & 63);
@@ -190,8 +287,8 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
     }
 
     @Override
-    public boolean unmark(E value) {
-        return value != null && unmark(value.ordinal());
+    public boolean remove(E value) {
+        return value != null && removeOrdinal(value.ordinal());
     }
 
     @Override
@@ -201,8 +298,42 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
     }
 
     @Override
+    public Class<E> getEnumClass() {
+        return enumClass;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return EEnumSetUtils.equals(this, o);
+    }
+
+    @Override
+    public int hashCode() {
+        return EEnumSetUtils.hashCode(this);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(size * 8);
+        sb.append('[');
+        int idx = 0;
+        for (int segment = 0; segment < bits.length; segment++) {
+            long remaining = bits[segment];
+            while (remaining != 0) {
+                if (idx > 0) sb.append(',');
+                int ordinal = Long.numberOfTrailingZeros(remaining);
+                sb.append(universe[(segment * 64) + ordinal].toString());
+                remaining &= (remaining - 1);
+                idx++;
+            }
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
+    @Override
     public EEnumSet<E> toImmutable() {
-        if (size == 0) return new EEnumSetEmpty<>(enumClass);
+        if (size == 0) return EEnumSetEmpty.of(enumClass);
         return new EEnumSetLarge<>(enumClass, bits, size);
     }
 }

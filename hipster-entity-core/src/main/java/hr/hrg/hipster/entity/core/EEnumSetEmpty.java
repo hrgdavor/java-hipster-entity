@@ -1,10 +1,20 @@
 package hr.hrg.hipster.entity.core;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 public final class EEnumSetEmpty<E extends Enum<E>> implements EEnumSet<E> {
+
+    private static final ConcurrentMap<Class<? extends Enum<?>>, EEnumSetEmpty<?>> CACHE = new ConcurrentHashMap<>();
+
+    @SuppressWarnings("unchecked")
+    static <E extends Enum<E>> EEnumSetEmpty<E> of(Class<E> enumClass) {
+        return (EEnumSetEmpty<E>) CACHE.computeIfAbsent(enumClass, cls -> new EEnumSetEmpty<>(enumClass));
+    }
 
     private final Class<E> enumClass;
 
-    public EEnumSetEmpty(Class<E> enumClass) {
+    EEnumSetEmpty(Class<E> enumClass) {
         this.enumClass = enumClass;
     }
 
@@ -27,22 +37,41 @@ public final class EEnumSetEmpty<E extends Enum<E>> implements EEnumSet<E> {
 	public boolean hasAny(EEnumSetRead<E> other) {	return false; }
 
 	@Override
-	public boolean hasAll(EEnumSetRead<E> other) { return false; }
+	public boolean hasAll(EEnumSetRead<E> other) {
+		return other != null && other.isEmpty();
+	}
 
 	@Override
 	public int size() {	return 0; }
 
-	@Override
-	public E get(int index) {return null;}
-	
 	@Override
 	public String toString() {
 		return "[]";
 	}
 
 	@Override
-	public void forEach(ForEach<E> callback) {
+	public Class<E> getEnumClass() {
+		return enumClass;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		return EEnumSetUtils.equals(this, o);
+	}
+
+	@Override
+	public int hashCode() {
+		return EEnumSetUtils.hashCode(this);
+	}
+
+	@Override
+	public void forEach(java.util.function.ObjIntConsumer<E> callback) {
 		// do nothing, this set is empty
+	}
+
+	@Override
+	public void forEach(java.util.function.Consumer<E> callback) {
+		// no values, nothing to call
 	}
 
 	@Override

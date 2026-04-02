@@ -39,9 +39,10 @@ This document tracks roadmap progress, current work, and changes in direction fo
 | `DEC-012` | Update-array and change-tracking semantics | Proposed        | Needs touched/dirty/null semantics and merge-mode contract                                  |
 | `DEC-013` | Optional per-view impl. selection factory  | Proposed        | Optional module; needs override precedence, fallback policy, and provider ordering contract |
 | `DEC-014` | EnumSet concrete dispatch strategy         | Accepted        | Implemented with JMH benchmarks; strategy is optional for update tracking hot paths        |
-| `DEC-015` | Generated field metadata method lookup    | Accepted        | Switch-only method-name lookup for field enums, verified by JMH sensor benchmarks          |
+| `DEC-015` | Generated field metadata method lookup     | Accepted        | Switch-only method-name lookup for field enums, verified by JMH sensor benchmarks          |
 
 ## 4. Direction change log
+jdk1.8.0_231/jre/bin/keytool -import -trustcacerts -alias myserver -file /opt/server.crt -keystore jdk1.8.0_231/jre/lib/security/cacerts
 
 - `2026-03-30`: moved docs into `doc/brainstorm`, `doc/architecture`, `doc/roadmap`.
 - `2026-03-30`: added projection/JSON streaming path section to brainstorm.

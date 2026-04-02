@@ -40,13 +40,13 @@ public class EEnumSetJmhBenchmark {
     public void setup() {
         b64a = EEnumSetBuilder.create(E64.class);
         b64b = EEnumSetBuilder.create(E64.class);
-        for (int i = 0; i < 64; i += 3) b64a.mark(i);
-        for (int i = 1; i < 64; i += 5) b64b.mark(i);
+        for (int i = 0; i < 64; i += 3) b64a.addOrdinal(i);
+        for (int i = 1; i < 64; i += 5) b64b.addOrdinal(i);
 
         b96a = EEnumSetBuilder.create(E96.class);
         b96b = EEnumSetBuilder.create(E96.class);
-        for (int i = 0; i < 96; i += 3) b96a.mark(i);
-        for (int i = 1; i < 96; i += 5) b96b.mark(i);
+        for (int i = 0; i < 96; i += 3) b96a.addOrdinal(i);
+        for (int i = 1; i < 96; i += 5) b96b.addOrdinal(i);
     }
 
     @Benchmark

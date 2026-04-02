@@ -19,12 +19,12 @@ public final class EntityUpdateTrackingArrayLarge<ID, T extends EntityBase<ID>, 
 
     @Override
     public boolean mark(int ordinal) {
-        return changes.mark(ordinal);
+        return changes.addOrdinal(ordinal);
     }
 
     @Override
     public boolean unmark(int ordinal) {
-        return changes.unmark(ordinal);
+        return changes.removeOrdinal(ordinal);
     }
 
     @Override
