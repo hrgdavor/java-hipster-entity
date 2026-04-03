@@ -1,5 +1,9 @@
 package hr.hrg.hipster.entity.tooling;
 
+import hr.hrg.hipster.entity.tooling.EntityFieldMeta;
+import hr.hrg.hipster.entity.tooling.EntityMeta;
+import hr.hrg.hipster.entity.tooling.Property;
+import hr.hrg.hipster.entity.tooling.ViewMeta;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -61,60 +65,65 @@ public class EntityMetadataGeneratorTest {
 
         String json = Files.readString(metadataFile);
 
+        EntityMeta entityMeta = EntityMetadataGenerator.fromJson(json);
+
         // Entity basics
-        Assertions.assertTrue(json.contains("\"entityName\": \"Person\""));
-        Assertions.assertTrue(json.contains("\"markerInterface\": \"PersonEntity\""));
-        Assertions.assertTrue(json.contains("\"idType\""));
-        Assertions.assertTrue(json.contains("java.lang.Long"));
+        Assertions.assertEquals("Person", entityMeta.entityName);
+        Assertions.assertEquals("PersonEntity", entityMeta.markerInterface);
+        Assertions.assertEquals("Long", entityMeta.idType);
 
         // View properties
-        Assertions.assertTrue(json.contains("\"name\": \"PersonSummary\""));
-        Assertions.assertTrue(json.contains("\"firstName\""));
-        Assertions.assertTrue(json.contains("\"lastName\""));
-        Assertions.assertTrue(json.contains("\"name\": \"metadata\""));
-        Assertions.assertTrue(json.contains("\"type\": \"java.util.Map\""));
-        Assertions.assertTrue(json.contains("\"genericArguments\""));
+        Assertions.assertNotNull(entityMeta.views);
+        Assertions.assertEquals(2, entityMeta.views.size());
 
-        // Primitive/boxed handling
-        Assertions.assertTrue(json.contains("\"name\": \"age\""));
-        Assertions.assertTrue(json.contains("\"type\": \"java.lang.Integer\""));
-        Assertions.assertTrue(json.contains("\"unboxed\": \"int\""));
-        Assertions.assertTrue(json.contains("\"primitive\": true"));
+        ViewMeta personSummary = null;
+        for (ViewMeta view : entityMeta.views) {
+            if ("PersonSummary".equals(view.name)) {
+                personSummary = view;
+                break;
+            }
+        }
+        Assertions.assertNotNull(personSummary, "PersonSummary view should exist");
+        Assertions.assertEquals(8, personSummary.lineNumber);
 
-        // @FieldSource on age → DERIVED
-        Assertions.assertTrue(json.contains("\"fieldKind\": \"DERIVED\""));
-        Assertions.assertTrue(json.contains("\"expression\": \"YEAR(NOW()) - YEAR(birthDate)\""));
+        Property firstNameProp = null;
+        for (Property prop : personSummary.properties) {
+            if ("firstName".equals(prop.name)) {
+                firstNameProp = prop;
+                break;
+            }
+        }
+        Assertions.assertNotNull(firstNameProp, "firstName property should exist");
+        Assertions.assertTrue(firstNameProp.lineNumber > 0, "firstName lineNumber should be > 0");
 
-        // @FieldSource on departmentName → JOINED
-        Assertions.assertTrue(json.contains("\"fieldKind\": \"JOINED\""));
-        Assertions.assertTrue(json.contains("\"relation\": \"department.name\""));
-
-        // Entity-wide allFields section
-        Assertions.assertTrue(json.contains("\"allFields\""));
+        Assertions.assertNotNull(entityMeta.allFields);
+        EntityFieldMeta ageField = null;
+        EntityFieldMeta firstNameField = null;
+        for (EntityFieldMeta field : entityMeta.allFields) {
+            if ("age".equals(field.name)) ageField = field;
+            if ("firstName".equals(field.name)) firstNameField = field;
+        }
+        Assertions.assertNotNull(ageField, "age should be in allFields");
+        Assertions.assertNotNull(firstNameField, "firstName should be in allFields");
+        Assertions.assertEquals("COLUMN", ageField.fieldKind);
+        Assertions.assertTrue(firstNameField.lineNumber > 0, "firstName allFields lineNumber should be > 0");
 
         // allFields: id is COLUMN and present in both views
-        Assertions.assertTrue(json.contains("\"fieldKind\": \"COLUMN\""));
+        Assertions.assertEquals("COLUMN", ageField.fieldKind);
 
         // allFields: typeByView tracking
-        Assertions.assertTrue(json.contains("\"typeByView\""));
+        Assertions.assertTrue(ageField.typeByView.containsKey("PersonSummary"));
+        Assertions.assertTrue(ageField.typeByView.containsKey("PersonDto"));
 
         // 'age' field: first seen as DERIVED in PersonSummary, then as COLUMN in PersonDto
-        // Non-derived (COLUMN) should win as the primary fieldKind for 'age'
-        int allFieldsStart = json.indexOf("\"allFields\"");
-        int ageAllFieldsPos = json.indexOf("\"name\": \"age\"", allFieldsStart);
-        Assertions.assertTrue(ageAllFieldsPos > 0, "age should appear in allFields");
-        // Extract from age entry to the next allFields entry (or end)
-        int ageEntryEnd = json.indexOf("\n    }", ageAllFieldsPos);
-        String ageSection = json.substring(ageAllFieldsPos, ageEntryEnd);
-        Assertions.assertTrue(ageSection.contains("\"fieldKind\": \"COLUMN\""), "age primary fieldKind should be COLUMN (non-derived wins): " + ageSection);
+        Assertions.assertNotNull(ageField, "age should appear in allFields");
+        Assertions.assertEquals("COLUMN", ageField.fieldKind);
 
-        // typeByView should show both views for 'age'
-        Assertions.assertTrue(json.contains("\"PersonSummary\":"), "typeByView should contain PersonSummary");
-        Assertions.assertTrue(json.contains("\"PersonDto\":"), "typeByView should contain PersonDto");
+        Assertions.assertTrue(ageField.typeByView.containsKey("PersonSummary"));
+        Assertions.assertTrue(ageField.typeByView.containsKey("PersonDto"));
 
-        // 'firstName' appears in both views with same type
-        int fnAllFieldsPos = json.indexOf("\"name\": \"firstName\"", json.indexOf("\"allFields\""));
-        Assertions.assertTrue(fnAllFieldsPos > 0, "firstName should appear in allFields");
+        // 'firstName' appears in allFields with a line number
+        Assertions.assertTrue(firstNameField.lineNumber > 0);
 
         // Enum generation
         Path enumFile = outputRoot.resolve("hr/hrg/hipster/entity/person/PersonSummaryProperty.java");

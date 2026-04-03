@@ -34,8 +34,17 @@ Concrete root views can also carry field accessors:
 public interface PersonSummary extends PersonEntity {
     String firstName();
     String lastName();
-    // ...
 }
+
+public interface PersonDTO extends PersonSummary {
+    @FieldSource(kind = FieldKind.DERIVED, expression = "YEAR(NOW()) - YEAR(birthDate)")
+    int age();
+}
+
+public interface PersonFull extends PersonSummary {
+    ObjectNode metadata();
+}
+
 ```
 
 ### Embedded/document fragment pattern

@@ -129,11 +129,14 @@ The metadata generator aggregates all fields from all views into an `allFields` 
 2. For each domain entity, define a root interface that extends `EntityBase`.
 3. For optional / supplemental views, add extra interfaces extending the root entity interface.
 4. Use naming conventions like `XEntity`, `XSummary`, `XDetails`.
-5. View metadata enum (`<ViewName>Property`) must include:
+5. Prefer `Update` naming for mutating view contracts (e.g. `PersonUpdate`, `EntityUpdate`), not `Mutable`.
+6. View metadata enum (`<ViewName>Property`) must include:
+7. See [Naming conventions](naming-conventions.md) for detailed rule definitions and consistency requirements.
    - all properties from transitive view/marker inheritance
    - the base `id` property first
    - no duplicate property entries (child property wins if present)
-6. Annotate non-column fields with `@FieldSource` so generators can distinguish columns from derived/joined fields.
+8. See [Materialization levels](materialization-levels.md) for Level 1/2/3 implementation paths.
+9. Annotate non-column fields with `@FieldSource` so generators can distinguish columns from derived/joined fields.
 7. For array-backed view field-definition enums, enum constant names MUST match view accessor and record component casing exactly (e.g. `id`, `firstName`, `departmentName`) even though this intentionally differs from typical `UPPER_SNAKE_CASE` enum style.
 8. Field-definition method mapping MUST use generated string switch dispatch as the canonical resolver for proxy method lookups.
 9. Alternative techniques (array binary search, char prefilter, perfect hash) are experimental and may be considered only with explicit benchmark evidence; they are not required to be emitted by default.

@@ -5,5 +5,5 @@ import hr.hrg.hipster.entity.api.View;
 import hr.hrg.hipster.entity.example.Auditable;
 
 @View(read = BooleanOption.TRUE, write = BooleanOption.FALSE)
-public interface PersonAuditable extends PersonEntity, Auditable<Long> {
+public interface PersonAuditable extends Person, Auditable<Long> {
 }

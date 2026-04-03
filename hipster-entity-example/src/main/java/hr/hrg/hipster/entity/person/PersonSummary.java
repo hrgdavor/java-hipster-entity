@@ -7,9 +7,7 @@ import hr.hrg.hipster.entity.api.FieldSource;
 import java.util.List;
 import java.util.Map;
 
-public interface PersonSummary extends PersonEntity {
-    String firstName();
-    String lastName();
+public interface PersonSummary extends Person {
 
     @FieldSource(kind = FieldKind.DERIVED, expression = "YEAR(NOW()) - YEAR(birthDate)")
     Integer age();
@@ -19,9 +17,11 @@ public interface PersonSummary extends PersonEntity {
 
     Map<String, List<Long>> metadata();
 
+    // generated boilerplate, for better dev experience
+
     public record Record(Long id, String firstName, String lastName, Integer age, String departmentName, Map<String, List<Long>> metadata) implements PersonSummary {}
 
-    public class Mutable implements PersonSummary, EntityUpdate<Long, PersonSummary, PersonSummaryField> {
+    public class Update implements PersonSummary, EntityUpdate<Long, PersonSummary, PersonSummaryField> {
         Long id;
         String firstName;
         String lastName;

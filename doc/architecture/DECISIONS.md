@@ -11,7 +11,7 @@ Architecture decisions are organized individually in the [decisions](decisions/)
 | [DEC-001](decisions/DEC-001.md) | Interface-first entity model          | Accepted |
 | [DEC-002](decisions/DEC-002.md) | Documentation structure               | Accepted |
 | [DEC-003](decisions/DEC-003.md) | Projection-oriented read path         | Accepted |
-| [DEC-004](decisions/DEC-004.md) | Generated metadata over reflection    | Proposed |
+| [DEC-004](decisions/DEC-004.md) | Generated metadata over reflection    | Accepted |
 | [DEC-005](decisions/DEC-005.md) | Field-source semantics                | Proposed |
 | [DEC-006](decisions/DEC-006.md) | Build-time type divergence validation | Proposed |
 | [DEC-007](decisions/DEC-007.md) | Projection performance vs ergonomics  | Accepted |
@@ -23,7 +23,7 @@ Architecture decisions are organized individually in the [decisions](decisions/)
 | [DEC-013](decisions/DEC-013.md) | Implementation selection factory      | Proposed |
 | [DEC-014](decisions/DEC-014.md) | EnumSet concrete dispatch strategy    | Accepted |
 | [DEC-015](decisions/DEC-015.md) | Field metadata method lookup strategy | Accepted |
-| [DEC-016](decisions/DEC-016.md) | **Field-name-to-ordinal: `forName`**  | Accepted |
+| [DEC-016](decisions/DEC-016.md) | Field-name-to-ordinal: `forName`      | Accepted |
 | [DEC-017](decisions/DEC-017.md) | Identifiable as opt-in identity mixin | Accepted |
 
 See individual decision files in [decisions/](decisions/) for complete details.

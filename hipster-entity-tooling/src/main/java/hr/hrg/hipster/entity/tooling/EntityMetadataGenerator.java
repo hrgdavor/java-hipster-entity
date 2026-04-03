@@ -1,5 +1,8 @@
 package hr.hrg.hipster.entity.tooling;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.javaparser.JavaParser;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
@@ -19,6 +22,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,95 +31,79 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class EntityMetadataGenerator {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public static class Property {
-        public final String name;
-        public final String type;
-        public final String fieldKind;   // COLUMN, DERIVED, JOINED (null = COLUMN default)
-        public final String column;      // explicit DB column name (null = use method name)
-        public final String relation;    // relation path for JOINED fields
-        public final String expression;  // expression for DERIVED fields
+    public static EntityMeta fromJson(String json) throws java.io.IOException {
+        JsonNode root = OBJECT_MAPPER.readTree(json);
 
-        public Property(String name, String type) {
-            this(name, type, null, null, null, null);
-        }
+        String entityName = root.path("entityName").asText();
+        String packageName = root.path("package").asText();
+        String markerInterface = root.path("markerInterface").asText();
+        String idType = root.path("idType").asText();
 
-        public Property(String name, String type, String fieldKind, String column, String relation, String expression) {
-            this.name = name;
-            this.type = type;
-            this.fieldKind = fieldKind;
-            this.column = column;
-            this.relation = relation;
-            this.expression = expression;
-        }
-    }
-
-    public static class ViewMeta {
-        public final String name;
-        public final List<String> extendsTypes;
-        public final Boolean read;
-        public final Boolean write;
-        public final List<Property> properties;
-
-        public ViewMeta(String name, List<String> extendsTypes, Boolean read, Boolean write, List<Property> properties) {
-            this.name = name;
-            this.extendsTypes = extendsTypes;
-            this.read = read;
-            this.write = write;
-            this.properties = properties;
-        }
-    }
-
-    public static class EntityMeta {
-        public final String entityName;
-        public final String packageName;
-        public final String markerInterface;
-        public final String idType;
-        public final List<ViewMeta> views;
-        public final List<EntityFieldMeta> allFields;
-
-        public EntityMeta(String entityName, String packageName, String markerInterface, String idType, List<ViewMeta> views, List<EntityFieldMeta> allFields) {
-            this.entityName = entityName;
-            this.packageName = packageName;
-            this.markerInterface = markerInterface;
-            this.idType = idType;
-            this.views = views;
-            this.allFields = allFields;
-        }
-    }
-
-    /** Entity-wide field metadata: one entry per unique field name across all views. */
-    public static class EntityFieldMeta {
-        public final String name;
-        public String type;          // primary type (non-derived wins over derived)
-        public String fieldKind;
-        public String column;
-        public String relation;
-        public String expression;
-        public final List<String> views;
-        public final Map<String, String> typeByView; // view name → type in that view
-
-        public EntityFieldMeta(String name, String type, String fieldKind, String column, String relation, String expression, List<String> views) {
-            this.name = name;
-            this.type = type;
-            this.fieldKind = fieldKind;
-            this.column = column;
-            this.relation = relation;
-            this.expression = expression;
-            this.views = views;
-            this.typeByView = new LinkedHashMap<>();
-        }
-
-        public boolean hasTypeDivergence() {
-            if (typeByView.size() <= 1) return false;
-            String first = null;
-            for (String t : typeByView.values()) {
-                if (first == null) first = t;
-                else if (!first.equals(t)) return true;
+        List<ViewMeta> views = new ArrayList<>();
+        for (JsonNode viewNode : root.path("views")) {
+            String viewName = viewNode.path("name").asText();
+            List<String> extendsTypes = new ArrayList<>();
+            for (JsonNode ext : viewNode.path("extends")) {
+                extendsTypes.add(ext.asText());
             }
-            return false;
+            Boolean read = viewNode.has("read") ? viewNode.path("read").asBoolean() : null;
+            Boolean write = viewNode.has("write") ? viewNode.path("write").asBoolean() : null;
+            int viewLineNumber = viewNode.path("lineNumber").asInt(-1);
+
+            List<Property> properties = new ArrayList<>();
+            for (JsonNode propNode : viewNode.path("properties")) {
+                String name = propNode.path("name").asText();
+                String type = parseTypeText(propNode.path("type"));
+                String fieldKind = propNode.has("fieldKind") ? propNode.path("fieldKind").asText(null) : null;
+                String column = propNode.has("column") ? propNode.path("column").asText(null) : null;
+                String relation = propNode.has("relation") ? propNode.path("relation").asText(null) : null;
+                String expression = propNode.has("expression") ? propNode.path("expression").asText(null) : null;
+                int lineNumber = propNode.path("lineNumber").asInt(-1);
+                properties.add(new Property(name, type, fieldKind, column, relation, expression, lineNumber));
+            }
+            views.add(new ViewMeta(viewName, extendsTypes, read, write, properties, viewLineNumber));
         }
+
+        List<EntityFieldMeta> allFields = new ArrayList<>();
+        for (JsonNode fieldNode : root.path("allFields")) {
+            String name = fieldNode.path("name").asText();
+            String type = parseTypeText(fieldNode.path("type"));
+            String fieldKind = fieldNode.path("fieldKind").asText(null);
+            String column = fieldNode.path("column").asText(null);
+            String relation = fieldNode.path("relation").asText(null);
+            String expression = fieldNode.path("expression").asText(null);
+            int lineNumber = fieldNode.path("lineNumber").asInt(-1);
+
+            List<String> fieldViews = new ArrayList<>();
+            for (JsonNode v : fieldNode.path("views")) {
+                fieldViews.add(v.asText());
+            }
+
+            Map<String,String> typeByView = new LinkedHashMap<>();
+            for (Iterator<Map.Entry<String, JsonNode>> it = fieldNode.path("typeByView").fields(); it.hasNext(); ) {
+                Map.Entry<String, JsonNode> entry = it.next();
+                typeByView.put(entry.getKey(), parseTypeText(entry.getValue()));
+            }
+
+            allFields.add(new EntityFieldMeta(name, type, fieldKind, column, relation, expression, lineNumber, fieldViews, typeByView));
+        }
+
+        return new EntityMeta(entityName, packageName, markerInterface, idType, views, allFields);
     }
+
+    private static String parseTypeText(JsonNode typeNode) {
+        if (typeNode.isTextual()) {
+            return typeNode.asText();
+        }
+        if (typeNode.isObject()) {
+            return typeNode.path("type").asText();
+        }
+        return null;
+    }
+
+    // metadata classes are now top-level in same package (Property, ViewMeta, EntityMeta, EntityFieldMeta)
 
     private static class TypeDescriptor {
         final String typeName;
@@ -252,6 +240,7 @@ public class EntityMetadataGenerator {
 
                             info.view = parseViewAnnotation(decl);
                             info.entityBaseIdType = parseEntityBaseIdType(decl);
+                            info.lineNumber = decl.getBegin().map(pos -> pos.line).orElse(-1);
                             interfaceMap.put(getQualifiedName(packageName, info.name), info);
                         }
 
@@ -276,7 +265,7 @@ public class EntityMetadataGenerator {
                         .filter(i -> !i.name.equals(marker.name))
                         .filter(i -> isDerivedFrom(i, marker, interfaceMap))
                         .map(i -> new ViewMeta(i.name, i.extendsTypes, i.view == null ? null : i.view.read,
-                                i.view == null ? null : i.view.write, i.properties))
+                                i.view == null ? null : i.view.write, i.properties, i.lineNumber))
                         .collect(Collectors.toList());
 
                 List<EntityFieldMeta> allFields = collectEntityFields(views, marker, interfaceMap);
@@ -303,10 +292,19 @@ public class EntityMetadataGenerator {
         List<Property> properties;
         ViewAttributes view;
         String entityBaseIdType;
+        int lineNumber;
 
         boolean isMarkerEntity() {
             return name.endsWith("Entity") && entityBaseIdType != null;
         }
+
+        public String getPackageName() { return packageName; }
+        public String getName() { return name; }
+        public List<String> getExtendsTypes() { return extendsTypes; }
+        public List<Property> getProperties() { return properties; }
+        public ViewAttributes getView() { return view; }
+        public String getEntityBaseIdType() { return entityBaseIdType; }
+        public int getLineNumber() { return lineNumber; }
     }
 
     private static class ViewAttributes {
@@ -343,7 +341,8 @@ public class EntityMetadataGenerator {
                 }
             }
         }
-        return new Property(name, type, fieldKind, column, relation, expression);
+        int lineNumber = method.getBegin().map(pos -> pos.line).orElse(-1);
+        return new Property(name, type, fieldKind, column, relation, expression, lineNumber);
     }
 
     private static String extractEnumValue(String value) {
@@ -368,7 +367,7 @@ public class EntityMetadataGenerator {
         // id field is always first
         String idType = marker != null && marker.entityBaseIdType != null ? toFullTypeName(marker.entityBaseIdType) : "java.lang.Object";
         List<String> idViews = views.stream().map(v -> v.name).collect(Collectors.toList());
-        EntityFieldMeta idField = new EntityFieldMeta("id", idType, "COLUMN", null, null, null, idViews);
+        EntityFieldMeta idField = new EntityFieldMeta("id", idType, "COLUMN", null, null, null, -1, idViews);
         for (String vn : idViews) idField.typeByView.put(vn, idType);
         fieldMap.put("id", idField);
 
@@ -394,7 +393,7 @@ public class EntityMetadataGenerator {
                 } else {
                     List<String> viewList = new ArrayList<>();
                     viewList.add(view.name);
-                    EntityFieldMeta fm = new EntityFieldMeta(prop.name, prop.type, propKind, prop.column, prop.relation, prop.expression, viewList);
+                    EntityFieldMeta fm = new EntityFieldMeta(prop.name, prop.type, propKind, prop.column, prop.relation, prop.expression, prop.lineNumber, viewList);
                     fm.typeByView.put(view.name, prop.type);
                     fieldMap.put(prop.name, fm);
                 }
@@ -484,15 +483,16 @@ public class EntityMetadataGenerator {
         appendJsonField(sb, "entityName", entityMeta.entityName, true);
         appendJsonField(sb, "package", entityMeta.packageName, true);
         appendJsonField(sb, "markerInterface", entityMeta.markerInterface, true);
-        sb.append("  \"idType\": ");
-        appendJsonType(sb, parseTypeDescriptor(entityMeta.idType), true, 0);
+        appendJsonField(sb, "idType", entityMeta.idType, true, 2);
 
         sb.append("  \"views\": [\n");
         for (int i = 0; i < entityMeta.views.size(); i++) {
             ViewMeta view = entityMeta.views.get(i);
             sb.append("    {\n");
             appendJsonField(sb, "name", view.name, true, 6);
+            appendJsonField(sb, "lineNumber", view.lineNumber, true, 6);
             sb.append("      \"extends\": [");
+
             sb.append(view.extendsTypes.stream().map(EntityMetadataGenerator::escapeJson).map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")));
             sb.append("],\n");
             appendJsonField(sb, "read", view.read, true, 6);
@@ -503,8 +503,9 @@ public class EntityMetadataGenerator {
                 sb.append("        {\n");
                 appendJsonField(sb, "name", prop.name, true, 8);
                 sb.append("        \"type\": ");
-                boolean hasTrailingFields = prop.fieldKind != null;
-                appendJsonType(sb, parseTypeDescriptor(prop.type), hasTrailingFields, 0);
+                boolean hasFieldKind = prop.fieldKind != null;
+                appendJsonType(sb, parseTypeDescriptor(prop.type), true, 0);
+                appendJsonField(sb, "lineNumber", prop.lineNumber, hasFieldKind, 8);
                 if (prop.fieldKind != null) {
                     appendJsonField(sb, "fieldKind", prop.fieldKind, prop.column != null || prop.relation != null || prop.expression != null, 8);
                     if (prop.column != null) {
@@ -536,6 +537,7 @@ public class EntityMetadataGenerator {
             appendJsonField(sb, "name", f.name, true, 6);
             sb.append("      \"type\": ");
             appendJsonType(sb, parseTypeDescriptor(f.type), true, 0);
+            appendJsonField(sb, "lineNumber", f.lineNumber, true, 6);
             appendJsonField(sb, "fieldKind", f.fieldKind, true, 6);
             if (f.column != null) {
                 appendJsonField(sb, "column", f.column, true, 6);
@@ -591,6 +593,13 @@ public class EntityMetadataGenerator {
         } else {
             sb.append(value);
         }
+        if (trailingComma) sb.append(",");
+        sb.append("\n");
+    }
+
+    private static void appendJsonField(StringBuilder sb, String key, int value, boolean trailingComma, int indent) {
+        String indentStr = " ".repeat(indent);
+        sb.append(indentStr).append("\"").append(key).append("\": ").append(value);
         if (trailingComma) sb.append(",");
         sb.append("\n");
     }
@@ -661,7 +670,7 @@ public class EntityMetadataGenerator {
         LinkedHashMap<String, Property> merged = new LinkedHashMap<>();
 
         String idType = marker != null && marker.entityBaseIdType != null ? toFullTypeName(marker.entityBaseIdType) : "java.lang.Object";
-        merged.put("id", new Property("id", idType));
+        merged.put("id", new Property("id", idType, -1));
 
         Set<String> visited = new HashSet<>();
         collectInterfaceProperties(viewInfo, merged, interfaceMap, visited);
