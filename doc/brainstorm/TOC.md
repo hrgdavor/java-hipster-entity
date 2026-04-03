@@ -16,6 +16,7 @@
 - [DEC-013 factory and implementation selection strategy](dec-013-factory-and-implementation-selection.md)
 - [DEC-014 enumset concrete dispatch strategy](dec-014-enumset-concrete-dispatch-strategy.md)
 - [DEC-015 generated field metadata method lookup strategy](dec-015-generated-field-metadata-method-lookup-strategy.md)
+- [DEC-017 identifiable as opt-in identity mixin](dec-017-identifiable-identity-mixin.md)
 - [Open questions index](open-questions-index.md)
 - [Annotation processing vs generated metadata rationale](annotation-processing-vs-generated-metadata.md)
 - [Entity metadata generator notes](entity-metadata-generator.md)
