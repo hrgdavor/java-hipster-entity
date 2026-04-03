@@ -32,11 +32,9 @@ public class EEnumSetTrackingJmhBenchmark {
         B80, B81, B82, B83, B84, B85, B86, B87, B88, B89, B90, B91, B92, B93, B94, B95
     }
 
-    static final class Dummy64 implements EntityBase<Integer> {
-    }
+    static final class Dummy64 implements EntityBase<Integer> {}
 
-    static final class Dummy96 implements EntityBase<Integer> {
-    }
+    static final class Dummy96 implements EntityBase<Integer> {}
 
     @State(Scope.Thread)
     public static class Builder64State {

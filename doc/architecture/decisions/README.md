@@ -43,6 +43,8 @@ This folder contains individual decision records for the hipster-entity project 
 |                       | Notes: JMH benchmarks validate dispatch benefit; strategy is optional   |          |            |
 | [DEC-015](DEC-015.md) | **Generated field metadata method lookup strategy**                     | Accepted | 2026-04-01 |
 |                       | Notes: Generated sorted arrays + binary search baseline; char-bucket optimization is optional and benchmark-gated |          |            |
+| [DEC-016](DEC-016.md) | **Field-name-to-ordinal dispatch: `forName` + ordinal indexing; per-call HashMap forbidden** | Accepted | 2026-04-03 |
+|                       | Notes: Mandates `ViewMeta.forName` + pre-built `readers[]`; prohibits per-call HashMap in all parse/map paths; see implementation guide in user docs |          |            |
 
 ## Template
 

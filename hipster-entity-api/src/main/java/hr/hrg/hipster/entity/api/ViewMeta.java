@@ -44,6 +44,28 @@ public interface ViewMeta<V, F extends Enum<F> & FieldDef> {
      * Reverse lookup: field name → enum constant, or {@code null} if not found.
      * Equivalent to {@code Enum.valueOf} but null-safe and without throwing on unknown names.
      *
+     * <p>The implementation is a <strong>generated {@code switch} statement</strong> (see DEC-015
+     * and DEC-016): O(1), zero allocation, no hashing. It is the only sanctioned path for
+     * resolving a field name to its ordinal in parse loops, mappers, and adapters.</p>
+     *
+     * <p><strong>⚠ MANDATORY RULE (DEC-016):</strong> Do <em>not</em> build a
+     * {@code HashMap<String,Integer>} (or any other dynamic name→ordinal structure) in place of
+     * this method. Per-call map construction allocates, hashes every field name on setup, and
+     * hashes every incoming token on lookup — all entirely unnecessary. The correct pattern is:
+     * <pre>{@code
+     * // called PER TOKEN in the parse loop:
+     * F field = meta.forName(name);       // O(1) switch — zero allocation
+     * if (field != null) {
+     *     int ord = field.ordinal();      // capture once; use for both array indices below
+     *     values[ord] = readers[ord].read(p);
+     * } else {
+     *     p.skipChildren();
+     * }
+     * }</pre>
+     * where {@code readers[]} is pre-built <em>once per deserializer instance</em>, not per call.
+     * See the full implementation guide at
+     * {@code doc/user/field-lookup-guide.md} and decision record DEC-016.</p>
+     *
      * @param name the field name (== {@code enum.name()})
      * @return the matching constant, or {@code null}
      */

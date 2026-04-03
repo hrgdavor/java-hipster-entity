@@ -19,11 +19,6 @@ public final class EntityReadArray<ID, T extends EntityBase<ID>, F extends Enum<
     }
 
     @Override
-    public ID id() {
-        return id;
-    }
-
-    @Override
     public Object get(F field) {
         return values[field.ordinal()];
     }

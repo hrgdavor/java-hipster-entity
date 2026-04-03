@@ -24,13 +24,13 @@ public final class ArrayBackedViewProxyFactory {
         return createRead(meta.viewType(), readArray, meta::forName);
     }
 
-    public static <ID, T extends EntityBase<ID>, F extends Enum<F>, V>
+    public static <ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef, V>
     V createRead(
             Class<V> viewType,
             EntityReadArray<ID, T, F> readArray,
-            Function<String, F> fieldByMethodName
+            hr.hrg.hipster.entity.api.FieldNameMapper<F> fieldByMethodName
     ) {
-        InvocationHandler handler = new ReadHandler<>(readArray, fieldByMethodName, viewType.getSimpleName() + "Proxy");
+        InvocationHandler handler = new ReadHandler<>(readArray, fieldByMethodName::forName, viewType.getSimpleName() + "Proxy");
         return viewType.cast(Proxy.newProxyInstance(
                 viewType.getClassLoader(),
                 new Class[]{viewType, EntityReader.class},
@@ -38,13 +38,13 @@ public final class ArrayBackedViewProxyFactory {
         ));
     }
 
-    public static <ID, T extends EntityBase<ID>, F extends Enum<F>, V>
+    public static <ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef, V>
     V createUpdatable(
             Class<V> viewType,
             EntityUpdateTrackingArray<ID, T, F> updateArray,
-            Function<String, F> fieldByMethodName
+            hr.hrg.hipster.entity.api.FieldNameMapper<F> fieldByMethodName
     ) {
-        InvocationHandler handler = new UpdatableHandler<>(updateArray, fieldByMethodName, viewType.getSimpleName() + "Proxy");
+        InvocationHandler handler = new UpdatableHandler<>(updateArray, fieldByMethodName::forName, viewType.getSimpleName() + "Proxy");
         return viewType.cast(Proxy.newProxyInstance(
                 viewType.getClassLoader(),
                 new Class[]{viewType},
@@ -61,7 +61,7 @@ public final class ArrayBackedViewProxyFactory {
         };
     }
 
-    private static final class ReadHandler<ID, T extends EntityBase<ID>, F extends Enum<F>> implements InvocationHandler {
+    private static final class ReadHandler<ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef> implements InvocationHandler {
         private final EntityReadArray<ID, T, F> readArray;
         private final Function<String, F> fieldByMethodName;
         private final String label;
@@ -85,9 +85,6 @@ public final class ArrayBackedViewProxyFactory {
             if (method.getParameterCount() != 0) {
                 throw new UnsupportedOperationException("Read proxy supports only zero-arg accessors");
             }
-            if (method.getName().equals("id")) {
-                return readArray.id();
-            }
 
             F field = fieldByMethodName.apply(method.getName());
             if (field == null) {
@@ -97,7 +94,7 @@ public final class ArrayBackedViewProxyFactory {
         }
     }
 
-    private static final class UpdatableHandler<ID, T extends EntityBase<ID>, F extends Enum<F>> implements InvocationHandler {
+    private static final class UpdatableHandler<ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef> implements InvocationHandler {
         private final EntityUpdateTrackingArray<ID, T, F> updateArray;
         private final Function<String, F> fieldByMethodName;
         private final String label;
@@ -118,9 +115,6 @@ public final class ArrayBackedViewProxyFactory {
             int parameterCount = method.getParameterCount();
 
             if (parameterCount == 0) {
-                if (name.equals("id")) {
-                    return updateArray.id();
-                }
                 if (name.equals("changes")) {
                     return updateArray.changesSnapshot();
                 }

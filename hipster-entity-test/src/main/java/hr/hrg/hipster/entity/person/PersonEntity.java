@@ -4,6 +4,5 @@ import hr.hrg.hipster.entity.api.EntityBase;
 import hr.hrg.hipster.entity.api.Identifiable;
 
 public interface PersonEntity extends EntityBase<Long>, Identifiable<Long> {
-
-    public record Record(Long id) implements PersonEntity {}
+    // marker interface; identity/audit metadata by base contract
 }

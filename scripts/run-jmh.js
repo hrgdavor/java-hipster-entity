@@ -243,19 +243,23 @@ async function main() {
     const forksNum = Number(options.forks);
 
     const jacksonDir = path.join(rootDir, "hipster-entity-jackson");
+    const testDir    = path.join(rootDir, "hipster-entity-test");
 
+    // Install jackson so hipster-entity-test can resolve it as a dependency.
     const bootstrapArgs = [
-        "-pl", "hipster-entity-jackson",
-        "-am",
+        "-pl", "hipster-entity-test",
         "-Pjmh",
         "-DskipTests",
         "install"
     ];
 
+    // Compile hipster-entity-test (and its deps via -am): this compiles all benchmark
+    // classes now living in the test module and runs the JMH annotation processor,
+    // generating runners in hipster-entity-test/target/generated-test-sources.
+    // The classpath file is written by the last module in reactor order (hipster-entity-test),
+    // so it includes jackson-databind, JMH, and all transitive deps.
     const compileArgs = [
-        "-pl", "hipster-entity-jackson",
-        "-am",
-        "-Pjmh",
+        "-pl", "hipster-entity-test",
         "-DskipTests",
         "clean",
         "test-compile",
@@ -272,8 +276,12 @@ async function main() {
 
     const dependencyClasspath = (await readFile(classpathFile, "utf8")).trim();
     const classpathEntries = [
+        // Test module first: all benchmark classes live here after the move
+        path.join(testDir, "target", "test-classes"),
+        path.join(testDir, "target", "classes"),
+        // Jackson module: production classes (no benchmark classes remain here)
+        path.join(jacksonDir, "target", "classes"),
         path.join(jacksonDir, "target", "test-classes"),
-        path.join(jacksonDir, "target", "classes")
     ];
     if (dependencyClasspath.length > 0) classpathEntries.push(dependencyClasspath);
     const effectiveClasspath = classpathEntries.join(path.delimiter);
@@ -287,19 +295,22 @@ async function main() {
         console.warn("Warning: current run uses short warmup/fork settings; JIT inlining may not be fully stabilized.");
     }
 
-    const generatedSourcesDir = path.join(jacksonDir, "target", "generated-test-sources", "test-annotations");
-    const generatedJavaFiles = await collectJavaFiles(generatedSourcesDir);
+    // Collect JMH generated runner sources from both modules — benchmarks may live in either.
+    const generatedJavaFiles = [
+        ...await collectJavaFiles(path.join(jacksonDir, "target", "generated-test-sources", "test-annotations")),
+        ...await collectJavaFiles(path.join(testDir,    "target", "generated-test-sources", "test-annotations")),
+    ];
     if (generatedJavaFiles.length > 0) {
         console.log(`Recompiling ${generatedJavaFiles.length} JMH generated sources with ${path.basename(javac)}...`);
         await runCommand([
             javac,
             "-cp", effectiveClasspath,
-            "-d", path.join(jacksonDir, "target", "test-classes"),
+            "-d", path.join(testDir, "target", "test-classes"),
             ...generatedJavaFiles
-        ], jacksonDir);
+        ], testDir);
     }
     console.log(`Results file: ${resultFile}`);
-    await runCommand([java, "-cp", effectiveClasspath, "org.openjdk.jmh.Main", ...jmhArgs], jacksonDir);
+    await runCommand([java, "-cp", effectiveClasspath, "org.openjdk.jmh.Main", ...jmhArgs], testDir);
 
     const jsonText = await readFile(resultFile, "utf8");
     const results = JSON.parse(jsonText);

@@ -2,6 +2,7 @@ package hr.hrg.hipster.entity.person;
 
 import hr.hrg.hipster.entity.api.DefaultViewMeta;
 import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.FieldNameMapper;
 import hr.hrg.hipster.entity.api.ViewMeta;
 import hr.hrg.hipster.entity.core.ArrayBackedViewProxyFactory;
 import hr.hrg.hipster.entity.core.EntityUpdateTrackingArray;
@@ -45,17 +46,19 @@ public enum PersonUpdateFormField implements FieldDef {    id(Long.class),
         };
     }
 
+    private static final FieldNameMapper<PersonUpdateFormField> NAME_MAPPER = PersonUpdateFormField::forName;
+
     public static final ViewMeta<PersonUpdateForm, PersonUpdateFormField> META = new DefaultViewMeta<>(
             PersonUpdateForm.class,
             PersonUpdateFormField.class,
-            PersonUpdateFormField::forName,
+            NAME_MAPPER,
             values -> {
                 EntityUpdateTrackingArray<Long, PersonUpdateForm, PersonUpdateFormField> updateArray =
                         EntityUpdateTrackingArray.create(PersonUpdateFormField.class, values);
                 return ArrayBackedViewProxyFactory.createUpdatable(
                         PersonUpdateForm.class,
                         updateArray,
-                        PersonUpdateFormField::forName);
+                        NAME_MAPPER);
             }
     );
 }

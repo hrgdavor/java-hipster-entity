@@ -35,10 +35,15 @@ public final class EntityJacksonMapper {
         }
     }
 
+    /**
+     * One-off deserialization using a per-call {@link EntityJacksonViewDeserializer} instance.
+     * Acceptable for single calls; for hot loops, pre-build the deserializer and call
+     * {@link EntityJacksonViewDeserializer#deserialize(JsonParser)} directly.
+     */
     public static <V extends EntityBase<?>, F extends Enum<F> & FieldDef> V fromJson(ViewMeta<V, F> meta,
                                                                 JsonParser p) {
         try {
-            return new EntityJacksonViewDeserializer().deserialize(meta, p);
+            return new EntityJacksonViewDeserializer<>(meta).deserialize(p);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to deserialize entity", e);
         }

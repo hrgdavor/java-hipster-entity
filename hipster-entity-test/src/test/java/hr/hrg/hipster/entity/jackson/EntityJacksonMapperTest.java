@@ -77,4 +77,24 @@ class EntityJacksonMapperTest {
         assertEquals(source.departmentName(), deserialized.departmentName());
         assertEquals(source.metadata(),       deserialized.metadata());
     }
+
+    @Test
+    void deserializeThroughBoilerplateDeserializer() throws Exception {
+        PersonSummary source = personSummary(42L, "Alice", "Smith", 34, "Engineering");
+
+        java.io.StringWriter writer = new java.io.StringWriter();
+        EntityJacksonMapper.toJson(PersonSummaryField.META,
+                (hr.hrg.hipster.entity.api.EntityReader<?, PersonSummary, ?>) source,
+                writer);
+        String json = writer.toString();
+
+        try (JsonParser parser = new com.fasterxml.jackson.databind.ObjectMapper().createParser(json)) {
+            PersonSummary deserialized = new PersonSummaryBoilerplateDeserializer().deserialize(parser);
+            assertEquals(source.firstName(),      deserialized.firstName());
+            assertEquals(source.lastName(),       deserialized.lastName());
+            assertEquals(source.age(),            deserialized.age());
+            assertEquals(source.departmentName(), deserialized.departmentName());
+            assertEquals(source.metadata(),       deserialized.metadata());
+        }
+    }
 }

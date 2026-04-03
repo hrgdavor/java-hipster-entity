@@ -40,6 +40,7 @@
         <module>hipster-entity-core</module>
         <module>hipster-entity-jackson</module>
         <module>hipster-entity-example</module>
+        <module>hipster-entity-test</module>
         <module>hipster-entity-tooling</module>
     </modules>
 

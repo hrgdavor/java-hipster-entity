@@ -16,13 +16,13 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
     private final Class<F> fieldType;
     private final F[] fieldValues;
     private final int fieldCount;
-    private final Function<String, F> forName;
+    private final FieldNameMapper<F> forName;
     private final Function<Object[], V> creator;
 
     public DefaultViewMeta(
             Class<V> viewType,
             Class<F> fieldType,
-            Function<String, F> forName,
+            FieldNameMapper<F> forName,
             Function<Object[], V> creator
     ) {
         this.viewType = Objects.requireNonNull(viewType, "viewType");
@@ -65,7 +65,7 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
 
     @Override
     public F forName(String name) {
-        return forName.apply(name);
+        return forName.forName(name);
     }
 
     @Override

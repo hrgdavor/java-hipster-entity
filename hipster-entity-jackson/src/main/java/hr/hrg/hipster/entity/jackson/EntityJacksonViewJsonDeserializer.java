@@ -12,16 +12,15 @@ import java.io.IOException;
 public final class EntityJacksonViewJsonDeserializer<V extends EntityBase<?>, F extends Enum<F> & FieldDef>
         extends JsonDeserializer<V> {
 
-    private final ViewMeta<V, F> meta;
-    private final EntityJacksonViewDeserializer deserializer;
+    /** Pre-built, reused across all Jackson-driven deserializations of this view type. */
+    private final EntityJacksonViewDeserializer<V, F> deserializer;
 
     public EntityJacksonViewJsonDeserializer(ViewMeta<V, F> meta) {
-        this.meta = meta;
-        this.deserializer = new EntityJacksonViewDeserializer();
+        this.deserializer = new EntityJacksonViewDeserializer<>(meta);
     }
 
     @Override
     public V deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        return deserializer.deserialize(meta, p);
+        return deserializer.deserialize(p);
     }
 }

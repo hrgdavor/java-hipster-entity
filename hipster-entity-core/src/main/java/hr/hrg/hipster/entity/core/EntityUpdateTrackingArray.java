@@ -1,7 +1,6 @@
 package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.api.EntityReader;
 import hr.hrg.hipster.entity.api.EntityUpdate;
 
 import java.util.Objects;
@@ -50,11 +49,6 @@ public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F 
 
     /** Access the underlying builder (interface-typed for generic callers). */
     public abstract EEnumSetBuilder<F> getChanges();
-
-    @Override
-    public ID id() {
-        return id;
-    }
 
     @Override
     public Object get(F field) {

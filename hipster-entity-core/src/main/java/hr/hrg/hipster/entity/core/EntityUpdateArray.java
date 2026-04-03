@@ -20,11 +20,6 @@ public final class EntityUpdateArray<ID, T extends EntityBase<ID>, F extends Enu
     }
 
     @Override
-    public ID id() {
-        return id;
-    }
-
-    @Override
     public Object get(F field) {
         return values[field.ordinal()];
     }
