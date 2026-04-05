@@ -1,4 +1,4 @@
-package hr.hrg.hipster.entity.person;
+package hr.hrg.hipster.entityexample.person.entity;
 
 import hr.hrg.hipster.entity.core.EEnumSet;
 
@@ -9,9 +9,9 @@ public interface PersonUpdatableView extends PersonUpdateForm {
     PersonUpdatableView email(String value);
     PersonUpdatableView phoneNumber(String value);
 
-    Object get(PersonUpdateFormField field);
-    boolean set(PersonUpdateFormField field, Object value);
+    Object get(PersonUpdateForm_ field);
+    boolean set(PersonUpdateForm_ field, Object value);
 
-    EEnumSet<PersonUpdateFormField> changes();
+    EEnumSet<PersonUpdateForm_> changes();
     void clearChanges();
 }

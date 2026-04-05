@@ -1,7 +1,7 @@
 package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.api.EntityReader;
+import hr.hrg.hipster.entity.api.ViewReader;
 import hr.hrg.hipster.entity.api.FieldDef;
 import hr.hrg.hipster.entity.api.ViewMeta;
 
@@ -33,7 +33,7 @@ public final class ArrayBackedViewProxyFactory {
         InvocationHandler handler = new ReadHandler<>(readArray, fieldByMethodName::forName, viewType.getSimpleName() + "Proxy");
         return viewType.cast(Proxy.newProxyInstance(
                 viewType.getClassLoader(),
-                new Class[]{viewType, EntityReader.class},
+                new Class[]{viewType, ViewReader.class},
                 handler
         ));
     }
@@ -77,7 +77,7 @@ public final class ArrayBackedViewProxyFactory {
             if (method.getDeclaringClass() == Object.class) {
                 return handleObjectMethods(proxy, method, args, label);
             }
-            if (method.getDeclaringClass() == EntityReader.class
+            if (method.getDeclaringClass() == ViewReader.class
                     && method.getName().equals("get") && method.getParameterCount() == 1
                     && method.getParameterTypes()[0] == int.class) {
                 return readArray.get((int) args[0]);

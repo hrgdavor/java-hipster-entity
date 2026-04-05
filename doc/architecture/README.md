@@ -129,7 +129,7 @@ The metadata generator aggregates all fields from all views into an `allFields` 
 2. For each domain entity, define a root interface that extends `EntityBase`.
 3. For optional / supplemental views, add extra interfaces extending the root entity interface.
 4. Use naming conventions like `XEntity`, `XSummary`, `XDetails`.
-5. Prefer `Update` naming for mutating view contracts (e.g. `PersonUpdate`, `EntityUpdate`), not `Mutable`.
+5. Prefer `Update` naming for mutating view contracts (e.g. `PersonUpdate`, `ViewWriter`), not `Mutable`.
 6. View metadata enum (`<ViewName>Property`) must include:
 7. See [Naming conventions](naming-conventions.md) for detailed rule definitions and consistency requirements.
    - all properties from transitive view/marker inheritance
@@ -141,7 +141,20 @@ The metadata generator aggregates all fields from all views into an `allFields` 
 8. Field-definition method mapping MUST use generated string switch dispatch as the canonical resolver for proxy method lookups.
 9. Alternative techniques (array binary search, char prefilter, perfect hash) are experimental and may be considered only with explicit benchmark evidence; they are not required to be emitted by default.
 
-## 7. Entity metadata example
+## 7. Tooling workflow
+
+The repository includes a small Bun-based runner at `scripts/run-tooling.js` for building and executing the generator.
+
+The current workflow is intentionally split:
+
+- `bun ./scripts/run-tooling.js build --mvn <path-to-mvnd>` builds the `hipster-entity-tooling` CLI once.
+- `bun ./scripts/run-tooling.js run --mvn <path-to-mvnd> <input-file> <output-dir>` executes the generator without rebuilding the CLI every time.
+
+This allows focused development on generated metadata and boilerplate while keeping build cost separate from repeated regeneration.
+
+The generator can infer the source root from a single input file path, so developers may invoke it on a single view interface and still produce the expected repository-relative output.
+
+## 8. Entity metadata example
 
 Repository tooling generates `X.metadata.json` and `XViewProperty` enums to avoid runtime reflection.
 
@@ -204,4 +217,5 @@ public enum PersonSummaryProperty {
     // Utility moved to hr.hrg.hipster.entity.api.TypeUtils and should be used by generated code.
 }
 ```
+
 

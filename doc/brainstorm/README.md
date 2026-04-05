@@ -4,6 +4,11 @@ These proposals build on a metadata-first foundation.
 The primary value of `hipster-entity` is the generated metadata and stable interface contracts that enable other tools.
 Concrete runtime helpers discussed here are optional building blocks; consumers may use the metadata directly without adopting every helper module.
 
+Current development has stabilized a separate generator CLI workflow:
+- the repository includes `scripts/run-tooling.js` as a Bun launcher,
+- `build` and `run` are separate commands so the CLI can be reused without repeated rebuilds,
+- generation now supports single-file input path inference and output directory reconstruction for example view interfaces such as `PersonSummary`.
+
 For a deeper rationale on why the project avoids annotation processing as its primary model and prefers generated metadata/materialized code over reflection, see [Annotation processing vs generated metadata and materialized code](annotation-processing-vs-generated-metadata.md).
 
 ## 1. Type Mapping & Divergence Validation
@@ -461,8 +466,8 @@ public final class PersonSummaryToPersonDtoMapper {
     }
 
     public void map(
-            EntityReader<Long, PersonEntity, PersonSummaryProperty> source,
-            EntityUpdate<Long, PersonEntity, PersonDtoProperty> target) {
+            ViewReader<Long, PersonEntity, PersonSummaryProperty> source,
+            ViewWriter<Long, PersonEntity, PersonDtoProperty> target) {
         target.set(PersonDtoProperty.firstName, source.get(PersonSummaryProperty.firstName));
         target.set(PersonDtoProperty.lastName, source.get(PersonSummaryProperty.lastName));
         target.set(PersonDtoProperty.age, ageConverter.apply((Integer) source.get(PersonSummaryProperty.age)));
@@ -476,9 +481,9 @@ public final class PersonSummaryToPersonDtoMapper {
 
 ---
 
-### 3.3 P-2: EntityReader / EntityUpdate implementations
+### 3.3 P-2: ViewReader / ViewWriter implementations
 
-**What**: For each view, generate a concrete implementation of `EntityReader` and/or `EntityUpdate` backed by an array or map, with typed getters and setters driven by the property enum.
+**What**: For each view, generate a concrete implementation of `ViewReader` and/or `ViewWriter` backed by an array or map, with typed getters and setters driven by the property enum.
 
 **Metadata used**:
 - `views[].properties` — determines fields and types
@@ -490,7 +495,7 @@ public final class PersonSummaryToPersonDtoMapper {
 
 ```java
 public class PersonSummaryRecord
-        implements EntityReader<Long, PersonEntity, PersonSummaryProperty> {
+        implements ViewReader<Long, PersonEntity, PersonSummaryProperty> {
 
     private final Object[] values;
 
@@ -525,7 +530,7 @@ public class PersonSummaryRecord
 }
 ```
 
-For write views, `EntityUpdate` implementation adds `set(field, value)` methods with the same ordinal-based array access.
+For write views, `ViewWriter` implementation adds `set(field, value)` methods with the same ordinal-based array access.
 
 **DX impact**: Zero hand-written record classes. Array-backed storage is cache-friendly and fast. Typed getters eliminate casts at call sites.
 
@@ -567,7 +572,7 @@ public final class PersonSummaryResultSetReader {
 public final class PersonSummaryStatementBinder {
 
     public static void bind(PreparedStatement ps,
-                            EntityReader<Long, PersonEntity, PersonSummaryProperty> entity)
+                            ViewReader<Long, PersonEntity, PersonSummaryProperty> entity)
             throws SQLException {
         // Only COLUMN fields — DERIVED and JOINED are skipped for writes
         ps.setString(1, (String) entity.get(PersonSummaryProperty.firstName));
@@ -632,7 +637,7 @@ The `primitive` flag determines whether to handle `rs.wasNull()` (for boxed type
 ```java
 public final class PersonSummaryMessageCodec {
 
-    public static byte[] encode(EntityReader<Long, PersonEntity, PersonSummaryProperty> entity) {
+    public static byte[] encode(ViewReader<Long, PersonEntity, PersonSummaryProperty> entity) {
         ByteBuffer buf = ByteBuffer.allocate(4096);
         // Header: view identifier + field count
         buf.putInt(PersonSummaryProperty.values().length);
@@ -663,7 +668,7 @@ public final class PersonSummaryMessageCodec {
 public final class PersonSummaryJsonCodec {
 
     // Uses property enum to serialize — no reflection, no Jackson annotations needed
-    public static String toJson(EntityReader<Long, PersonEntity, PersonSummaryProperty> entity) {
+    public static String toJson(ViewReader<Long, PersonEntity, PersonSummaryProperty> entity) {
         StringBuilder sb = new StringBuilder("{");
         PersonSummaryProperty[] fields = PersonSummaryProperty.values();
         for (int i = 0; i < fields.length; i++) {
@@ -735,7 +740,7 @@ public final class PersonKeys {
 public final class PersonSummaryRedisAdapter {
 
     public static Map<String, String> toHash(
-            EntityReader<Long, PersonEntity, PersonSummaryProperty> entity) {
+            ViewReader<Long, PersonEntity, PersonSummaryProperty> entity) {
         Map<String, String> hash = new LinkedHashMap<>();
         for (PersonSummaryProperty field : PersonSummaryProperty.values()) {
             Object value = entity.get(field);
@@ -765,7 +770,7 @@ public final class PersonSummaryRedisAdapter {
 public final class PersonSummaryDynamoAdapter {
 
     public static Map<String, AttributeValue> toItem(
-            EntityReader<Long, PersonEntity, PersonSummaryProperty> entity) {
+            ViewReader<Long, PersonEntity, PersonSummaryProperty> entity) {
         Map<String, AttributeValue> item = new LinkedHashMap<>();
         item.put("PK", AttributeValue.fromS(PersonKeys.entityKey((Long) entity.id())));
         item.put("SK", AttributeValue.fromS("PersonSummary"));
@@ -799,7 +804,7 @@ public final class PersonSummaryDynamoAdapter {
 public final class PersonCreateFormValidator {
 
     public static List<String> validate(
-            EntityReader<Long, PersonEntity, PersonCreateFormProperty> entity) {
+            ViewReader<Long, PersonEntity, PersonCreateFormProperty> entity) {
         List<String> errors = new ArrayList<>();
 
         // firstName: @NotNull, @Size(min=1, max=100)
@@ -834,7 +839,7 @@ public final class PersonCreateFormValidator {
 
 ```java
 public final class PersonCreateFormBuilder
-        implements EntityUpdate<Long, PersonEntity, PersonCreateFormProperty> {
+        implements ViewWriter<Long, PersonEntity, PersonCreateFormProperty> {
 
     private final Object[] values = new Object[PersonCreateFormProperty.values().length];
 
@@ -883,7 +888,7 @@ public final class PersonCreateFormBuilder
 }
 ```
 
-**DX impact**: Fluent API for constructing entities. Implements `EntityUpdate` so it can be passed to any code that accepts writable entities. Eliminates manual constructor/setter boilerplate.
+**DX impact**: Fluent API for constructing entities. Implements `ViewWriter` so it can be passed to any code that accepts writable entities. Eliminates manual constructor/setter boilerplate.
 
 ---
 
@@ -891,7 +896,7 @@ public final class PersonCreateFormBuilder
 
 | Priority | Proposal | Prerequisite | Complexity | Impact |
 |----------|----------|-------------|-----------|--------|
-| **1** | P-2: EntityReader / EntityUpdate impls | Property enum (exists) | Low | Foundational — all other proposals build on this |
+| **1** | P-2: ViewReader / ViewWriter impls | Property enum (exists) | Low | Foundational — all other proposals build on this |
 | **2** | P-7: Builder pattern | P-2 | Low | Critical for write path; natural companion to reader |
 | **3** | P-1: View-to-view mappers | P-2, P-7 | Medium | Eliminates most hand-written mapping code |
 | **4** | P-3: Database adapters | P-2, type-to-JDBC mapping | Medium | Core persistence; high ROI for DB-backed apps |
@@ -904,7 +909,7 @@ public final class PersonCreateFormBuilder
 
 ```mermaid
 graph TD
-    ENUM["Property enum (exists)"] --> P2["P-2: EntityReader impls"]
+    ENUM["Property enum (exists)"] --> P2["P-2: ViewReader impls"]
     P2 --> P7["P-7: Builder"]
     P7 --> P1["P-1: Mappers"]
     P2 --> P3["P-3: DB adapters"]
@@ -914,7 +919,7 @@ graph TD
     ANN["Annotation collection (§2)"] --> P6["P-6: Validation"]
 ```
 
-P-2 is the keystone: every other producer and consumer of entity data needs a concrete `EntityReader`/`EntityUpdate` implementation. Once P-2 exists, the remaining proposals become largely independent and can be developed in parallel.
+P-2 is the keystone: every other producer and consumer of entity data needs a concrete `ViewReader`/`ViewWriter` implementation. Once P-2 exists, the remaining proposals become largely independent and can be developed in parallel.
 
 ---
 
@@ -925,7 +930,7 @@ P-2 is the keystone: every other producer and consumer of entity data needs a co
 3. **Array-backed storage** — `Object[]` indexed by enum ordinal. Fast, cache-friendly, GC-friendly.
 4. **FieldKind-aware logic** — COLUMN / DERIVED / JOINED drives different codegen paths (skip DERIVED on write, include expressions in SELECT, generate joins for JOINED).
 5. **Type-safe converters only where needed** — identical types copy directly; converters only injected for `hasTypeDivergence()` fields.
-6. **Composable** — each generated artifact implements a known interface (`EntityReader`, `EntityUpdate`). Adapters compose cleanly across stores.
+6. **Composable** — each generated artifact implements a known interface (`ViewReader`, `ViewWriter`). Adapters compose cleanly across stores.
 7. **Reproducible** — re-running the generator from the same interface sources produces identical output. Generated files should not be manually edited.
 
 ---
@@ -974,3 +979,5 @@ Focus:
 
 For a centralized list of unresolved cross-document questions, see:
 - [Open questions index](open-questions-index.md)
+
+

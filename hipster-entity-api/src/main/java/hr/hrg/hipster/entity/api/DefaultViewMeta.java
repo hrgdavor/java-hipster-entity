@@ -18,6 +18,9 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
     private final int fieldCount;
     private final FieldNameMapper<F> forName;
     private final Function<Object[], V> creator;
+    private final F discriminatorField;
+    private final String discriminatorValue;
+    private final Class<?>[] permittedSubtypes;
 
     public DefaultViewMeta(
             Class<V> viewType,
@@ -25,12 +28,27 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
             FieldNameMapper<F> forName,
             Function<Object[], V> creator
     ) {
+        this(viewType, fieldType, forName, creator, null, "", new Class<?>[0]);
+    }
+
+    public DefaultViewMeta(
+            Class<V> viewType,
+            Class<F> fieldType,
+            FieldNameMapper<F> forName,
+            Function<Object[], V> creator,
+            F discriminatorField,
+            String discriminatorValue,
+            Class<?>[] permittedSubtypes
+    ) {
         this.viewType = Objects.requireNonNull(viewType, "viewType");
         this.fieldType = Objects.requireNonNull(fieldType, "fieldType");
         this.fieldValues = fieldType.getEnumConstants();
         this.fieldCount = this.fieldValues.length;
         this.forName = Objects.requireNonNull(forName, "forName");
         this.creator = Objects.requireNonNull(creator, "creator");
+        this.discriminatorField = discriminatorField;
+        this.discriminatorValue = discriminatorValue == null ? "" : discriminatorValue;
+        this.permittedSubtypes = permittedSubtypes == null ? new Class<?>[0] : permittedSubtypes.clone();
     }
 
     @Override
@@ -66,6 +84,21 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
     @Override
     public F forName(String name) {
         return forName.forName(name);
+    }
+
+    @Override
+    public F discriminatorField() {
+        return discriminatorField;
+    }
+
+    @Override
+    public String discriminatorValue() {
+        return discriminatorValue;
+    }
+
+    @Override
+    public Class<?>[] permittedSubtypes() {
+        return permittedSubtypes.clone();
     }
 
     @Override

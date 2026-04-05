@@ -1,4 +1,4 @@
-package hr.hrg.hipster.entity.example;
+package hr.hrg.hipster.entityexample.example;
 
 import hr.hrg.hipster.entity.api.EntityBase;
 

@@ -1,6 +1,7 @@
 package hr.hrg.hipster.entity.core;
 
 import java.util.EnumSet;
+import java.util.Objects;
 
 public interface EEnumSetBuilder<E extends Enum<E>> extends EEnumSetRead<E> {
 
@@ -19,6 +20,24 @@ public interface EEnumSetBuilder<E extends Enum<E>> extends EEnumSetRead<E> {
     // explicit ordinal-based operations
     boolean addOrdinal(int ordinal);
     boolean removeOrdinal(int ordinal);
+
+    /**
+     * Marks the ordinal as changed only when the old and new values differ.
+     * Returns true if the supplied values are different, false when they are equal.
+     * If the values differ, the ordinal is added to the set if needed.
+     *
+     * @param ordinal the ordinal field to mark
+     * @param OldValue the previous value
+     * @param NewValue the new value
+     * @return true when the value changed, false when the values are equal
+     */
+    default public boolean addOrdinalChange(int ordinal, Object OldValue, Object NewValue) {
+        if (Objects.equals(OldValue, NewValue)) {
+            return false;
+        }
+        addOrdinal(ordinal);
+        return true;
+    }
 
     // explicit enum-value operations
     boolean add(E value);
@@ -39,7 +58,6 @@ public interface EEnumSetBuilder<E extends Enum<E>> extends EEnumSetRead<E> {
     EEnumSetBuilder<E> retainAll(EEnumSetRead<E> other);
     EEnumSetBuilder<E> addAll(Iterable<E> values);
     EEnumSetBuilder<E> removeAll(Iterable<E> values);
-
 
     void clear();
 

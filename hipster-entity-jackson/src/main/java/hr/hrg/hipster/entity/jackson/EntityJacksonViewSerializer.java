@@ -2,7 +2,7 @@ package hr.hrg.hipster.entity.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.api.EntityReader;
+import hr.hrg.hipster.entity.api.ViewReader;
 import hr.hrg.hipster.entity.api.FieldDef;
 import hr.hrg.hipster.entity.api.ViewMeta;
 
@@ -56,7 +56,7 @@ public final class EntityJacksonViewSerializer<V extends EntityBase<?>, F extend
         }
     }
 
-    public void serialize(EntityReader<?, V, ?> entity, JsonGenerator gen) throws IOException {
+    public void serialize(ViewReader<?, V, ?> entity, JsonGenerator gen) throws IOException {
         gen.writeStartObject();
 
         for (int i = 0, fieldCount = fields.length; i < fieldCount; i++) {

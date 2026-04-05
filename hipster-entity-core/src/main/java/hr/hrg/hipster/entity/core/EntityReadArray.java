@@ -1,9 +1,9 @@
 package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.api.EntityReader;
+import hr.hrg.hipster.entity.api.ViewReader;
 
-public final class EntityReadArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements EntityReader<ID,T, F> {
+public final class EntityReadArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements ViewReader<ID,T, F> {
 
     private final Class<F> enumClass;
     private final Object[] values;

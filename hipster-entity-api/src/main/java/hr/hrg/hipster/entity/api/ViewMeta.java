@@ -72,6 +72,37 @@ public interface ViewMeta<V, F extends Enum<F> & FieldDef> {
     F forName(String name);
 
     /**
+     * Discriminator field used by polymorphic view hierarchies.
+     *
+     * <p>For sealed view roots, this is the field enum constant representing the
+     * JSON/JDBC discriminator property. For non-polymorphic views, the default is
+     * {@code null}.</p>
+     */
+    default F discriminatorField() {
+        return null;
+    }
+
+    /**
+     * Discriminator value for this concrete view type.
+     *
+     * <p>For concrete polymorphic subviews, this is the value written into the
+     * discriminator field. For root or non-polymorphic views, the default is empty.</p>
+     */
+    default String discriminatorValue() {
+        return "";
+    }
+
+    /**
+     * Permitted subtypes for a sealed view root.
+     *
+     * <p>Only the root metadata needs to expose this information; concrete views may
+     * return an empty array.</p>
+     */
+    default Class<?>[] permittedSubtypes() {
+        return new Class<?>[0];
+    }
+
+    /**
      * Constructs the view from a positional values array where {@code values[f.ordinal()]}
      * holds the value for field {@code f}.
      *

@@ -1,7 +1,7 @@
 package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.api.EntityUpdate;
+import hr.hrg.hipster.entity.api.ViewWriter;
 
 import java.util.Objects;
 
@@ -11,7 +11,7 @@ import java.util.Objects;
  * Concrete subclasses hold their builder as a concrete type so the JVM can
  * statically dispatch (and inline) {@link #mark}/{@link #clear} on the hot path.
  */
-public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements EntityUpdate<ID, T, F> {
+public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements ViewWriter<ID, T, F> {
 
     protected final Class<F> enumClass;
     protected final Object[] values;

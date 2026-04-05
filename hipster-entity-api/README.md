@@ -16,8 +16,8 @@ This module defines the foundational contracts to express top-level roots vs emb
 
 - `EntityBase<ID>`: marker for objects with an identity type; no method required.
 - `Identifiable<ID>`: only objects with explicit identity semantics must implement this.
-- `EntityReader<ID, T extends EntityBase<ID>, F extends Enum<F>>`: readable field-oriented view interface; lookup by field and ordinal.
-- `EntityUpdate<ID, E extends EntityBase<ID>, F extends Enum<F>>`: mutable view extending `EntityReader`.
+- `ViewReader<ID, T extends EntityBase<ID>, F extends Enum<F>>`: readable field-oriented view interface; lookup by field and ordinal.
+- `ViewWriter<ID, E extends EntityBase<ID>, F extends Enum<F>>`: mutable view extending `ViewReader`.
 
 ### Top-level entity (root) pattern
 
@@ -75,4 +75,6 @@ This ensures all accessors, including `id`, follow the same mapping behavior and
 - keeps read-only and update contracts orthogonal to identity
 - allows reuse of same array-backed value representation for different semantic roles
 - supports streaming/json serialization/deserialization pathways (Jackson mapping, parse+create patterns)
+
+
 

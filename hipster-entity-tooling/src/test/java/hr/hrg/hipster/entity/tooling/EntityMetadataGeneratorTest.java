@@ -7,8 +7,10 @@ import hr.hrg.hipster.entity.tooling.ViewMeta;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 public class EntityMetadataGeneratorTest {
 
@@ -126,15 +128,164 @@ public class EntityMetadataGeneratorTest {
         Assertions.assertTrue(firstNameField.lineNumber > 0);
 
         // Enum generation
-        Path enumFile = outputRoot.resolve("hr/hrg/hipster/entity/person/PersonSummaryProperty.java");
+        Path enumFile = outputRoot.resolve("hr/hrg/hipster/entity/person/PersonSummary_.java");
         Assertions.assertTrue(Files.exists(enumFile), "View property enum should be generated");
 
         String enumSource = Files.readString(enumFile);
-        Assertions.assertTrue(enumSource.contains("enum PersonSummaryProperty"));
+        Assertions.assertTrue(enumSource.contains("enum PersonSummary_"));
         Assertions.assertTrue(enumSource.contains("id(java.lang.Long.class)"));
         Assertions.assertTrue(enumSource.contains("firstName(java.lang.String.class)"));
         Assertions.assertTrue(enumSource.contains("lastName(java.lang.String.class)"));
         Assertions.assertTrue(enumSource.contains("age(java.lang.Integer.class)"));
         Assertions.assertTrue(enumSource.contains("departmentName(java.lang.String.class)"));
+    }
+
+    @Test
+    public void generatePaymentMethodMetadataFromExampleSources() throws Exception {
+        Path outputRoot = Files.createTempDirectory("paymentmethod-output");
+
+        Path moduleRoot = Path.of("").toAbsolutePath();
+        if (moduleRoot.endsWith("hipster-entity-tooling")) {
+            moduleRoot = moduleRoot.getParent();
+        }
+
+        Path exampleSource = moduleRoot.resolve("hipster-entity-example")
+                .resolve("src")
+                .resolve("main")
+                .resolve("java")
+                .resolve("hr")
+                .resolve("hrg")
+                .resolve("hipster")
+                .resolve("entityexample")
+                .resolve("paymentMethod")
+                .resolve("entity");
+        Assertions.assertTrue(Files.exists(exampleSource), "Example paymentMethod sources must exist for this integration test");
+
+        EntityMetadataGenerator.generate(exampleSource, outputRoot);
+
+        Path metadataFile = outputRoot.resolve("PaymentMethod.metadata.json");
+        Assertions.assertTrue(Files.exists(metadataFile), "PaymentMethod metadata should be generated");
+
+        String json = Files.readString(metadataFile);
+        Assertions.assertTrue(json.contains("PaymentMethod"), "Metadata JSON should mention PaymentMethod");
+        Assertions.assertTrue(json.contains("BankTransferPaymentMethod"), "Metadata JSON should include concrete subtype names");
+
+        Assertions.assertTrue(Files.exists(outputRoot.resolve("hr/hrg/hipster/entityexample/paymentMethod/entity/BankTransferPaymentMethod_.java")));
+        Assertions.assertTrue(Files.exists(outputRoot.resolve("hr/hrg/hipster/entityexample/paymentMethod/entity/CreditCardPaymentMethod_.java")));
+        Assertions.assertTrue(Files.exists(outputRoot.resolve("hr/hrg/hipster/entityexample/paymentMethod/entity/CryptoPaymentMethod_.java")));
+        Assertions.assertTrue(Files.exists(outputRoot.resolve("hr/hrg/hipster/entityexample/paymentMethod/entity/PayPalPaymentMethod_.java")));
+
+        String enumSource = Files.readString(outputRoot.resolve("hr/hrg/hipster/entityexample/paymentMethod/entity/BankTransferPaymentMethod_.java"));
+        Assertions.assertTrue(enumSource.contains("enum BankTransferPaymentMethod_"));
+        Assertions.assertTrue(enumSource.contains("accountNumber(java.lang.String.class)"));
+    }
+
+    @Test
+    public void generateFromSingleJavaFileUsesExampleSourceRoot() throws Exception {
+        Path sourceRoot = Files.createTempDirectory("single-file-source-root");
+        Path packageDir = sourceRoot.resolve("hr/hrg/hipster/entity/person");
+        Files.createDirectories(packageDir);
+
+        String entitySource = "package hr.hrg.hipster.entity.person;\n" +
+                "import hr.hrg.hipster.entity.api.EntityBase;\n" +
+                "public interface PersonEntity extends EntityBase<Long> {}\n";
+        String summarySource = "package hr.hrg.hipster.entity.person;\n" +
+                "import hr.hrg.hipster.entity.api.View;\n" +
+                "import hr.hrg.hipster.entity.api.BooleanOption;\n" +
+                "import java.util.Map;\n" +
+                "import java.util.List;\n" +
+                "@View(read = BooleanOption.TRUE, write = BooleanOption.FALSE)\n" +
+                "public interface PersonSummary extends PersonEntity {\n" +
+                "  String firstName();\n" +
+                "  String lastName();\n" +
+                "  Map<String, List<Long>> metadata();\n" +
+                "}\n";
+
+        Path entityFile = packageDir.resolve("PersonEntity.java");
+        Path summaryFile = packageDir.resolve("PersonSummary.java");
+        Files.writeString(entityFile, entitySource);
+        Files.writeString(summaryFile, summarySource);
+
+        Path outputRoot = Files.createTempDirectory("single-file-output");
+        EntityMetadataGenerator.main(new String[]{summaryFile.toString(), outputRoot.toString()});
+
+        Path generatedEnum = packageDir.resolve("PersonSummary_.java");
+        Assertions.assertTrue(Files.exists(generatedEnum), "Generated property enum should be written back into the source tree");
+        String generatedSource = Files.readString(generatedEnum);
+        Assertions.assertTrue(generatedSource.contains("return switch (name)"), "Generated property enum should use a switch expression for forName lookup");
+        Assertions.assertTrue(generatedSource.contains("case \"id\" -> id;"), "Generated property enum should include a switch case for id");
+    }
+
+    @Test
+    public void generateAndCompileExamplePersonBoilerplate() throws Exception {
+        Path moduleRoot = findModuleRoot();
+        Path repoRoot = moduleRoot.getFileName().toString().equals("hipster-entity-tooling")
+                ? moduleRoot.getParent()
+                : moduleRoot;
+
+        Path exampleSourceRoot = repoRoot.resolve("hipster-entity-example").resolve("src").resolve("main").resolve("java");
+        Assertions.assertTrue(Files.exists(exampleSourceRoot), "Example source root must exist");
+
+        Path outputRoot = Files.createTempDirectory("person-boilerplate-compile");
+        EntityMetadataGenerator.generate(exampleSourceRoot, outputRoot);
+
+        List<Path> generatedSources = Files.walk(outputRoot)
+                .filter(p -> p.toString().endsWith(".java"))
+                .toList();
+        Assertions.assertFalse(generatedSources.isEmpty(), "Generated source files should exist");
+
+        List<Path> exampleSources = Files.walk(exampleSourceRoot)
+                .filter(p -> p.toString().endsWith(".java"))
+                .filter(p -> !p.getFileName().toString().endsWith("_.java"))
+                .toList();
+        Assertions.assertFalse(exampleSources.isEmpty(), "Example source files should exist");
+
+        Path compileOutput = Files.createTempDirectory("person-boilerplate-classes");
+        boolean compiled = compileSources(repoRoot, generatedSources, exampleSources, compileOutput);
+        Assertions.assertTrue(compiled, "Generated example boilerplate should compile successfully");
+
+        Path summaryEnum = outputRoot.resolve("hr/hrg/hipster/entityexample/person/entity/PersonSummary_.java");
+        Assertions.assertTrue(Files.exists(summaryEnum), "PersonSummary_ enum should be generated in the example output");
+        String summarySource = Files.readString(summaryEnum);
+        Assertions.assertTrue(summarySource.contains("switch (name)"), "Generated PersonSummary_ should use a switch-based forName lookup");
+        Assertions.assertTrue(summarySource.contains("case \"id\" -> id;"), "Generated PersonSummary_ should include a switch case for id");
+    }
+
+    private Path findModuleRoot() {
+        Path current = Path.of("").toAbsolutePath();
+        while (current != null && !Files.exists(current.resolve("pom.xml"))) {
+            current = current.getParent();
+        }
+        if (current == null) {
+            throw new IllegalStateException("Cannot locate module root from current working directory");
+        }
+        return current;
+    }
+
+    private boolean compileSources(Path repoRoot, List<Path> generatedSources, List<Path> exampleSources, Path outputDir) throws IOException {
+        javax.tools.JavaCompiler compiler = javax.tools.ToolProvider.getSystemJavaCompiler();
+        Assertions.assertNotNull(compiler, "Java compiler must be available in the test runtime");
+
+        try (javax.tools.StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null)) {
+            List<Path> allSources = new java.util.ArrayList<>(generatedSources);
+            allSources.addAll(exampleSources);
+            Iterable<? extends javax.tools.JavaFileObject> compilationUnits = fileManager.getJavaFileObjectsFromFiles(
+                    allSources.stream().map(Path::toFile).toList());
+
+            String pathSeparator = System.getProperty("path.separator");
+            String explicitClasspath = String.join(pathSeparator,
+                    repoRoot.resolve("hipster-entity-api/target/classes").toString(),
+                    repoRoot.resolve("hipster-entity-core/target/classes").toString());
+
+            javax.tools.JavaCompiler.CompilationTask task = compiler.getTask(
+                    null,
+                    fileManager,
+                    null,
+                    java.util.List.of("-d", outputDir.toString(), "-classpath", explicitClasspath),
+                    null,
+                    compilationUnits);
+
+            return task.call();
+        }
     }
 }

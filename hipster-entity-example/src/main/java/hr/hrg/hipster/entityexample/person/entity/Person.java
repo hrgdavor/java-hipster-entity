@@ -1,8 +1,10 @@
-package hr.hrg.hipster.entity.person;
+package hr.hrg.hipster.entityexample.person.entity;
 
 import hr.hrg.hipster.entity.api.EntityBase;
 import hr.hrg.hipster.entity.api.Identifiable;
+import hr.hrg.hipster.entity.api.View;
 
+@View(addons = {PersonAuditable.class})
 public interface Person extends EntityBase<Long>, Identifiable<Long> {
     String firstName();
     String lastName();

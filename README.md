@@ -17,6 +17,29 @@ The project favors explicit metadata and predictable contracts over reflection-h
 - [Roadmap](doc/roadmap/README.md)
 - [User documentation](doc/user/README.md)
 
+## Tooling runner with Bun
+
+A small Bun script is available to build and execute the tooling jar from the repository root.
+
+Examples:
+
+- `bun ./scripts/run-tooling.js build --mvn "D:\\programs\\mvnd\\bin\\mvnd"`
+- `bun ./scripts/run-tooling.js run --mvn "D:\\programs\\mvnd\\bin\\mvnd" hipster-entity-example/src/main/java/hr/hrg/hipster/entityexample/person/entity/PersonSummary.java hipster-entity-tooling/target/person-summary-tooling-output`
+
+Common options:
+
+- `--build` — when running, build the tooling jar before execution
+- `--force-build` — force a rebuild even when the jar already exists
+- `--java <path>` — explicit `java` executable
+- `--mvn <path>` — explicit Maven executable or `mvnd` launcher
+
+The `build` command is now separate from `run` so you can build the CLI once and run it repeatedly.
+
+When Maven or Java are not on `PATH`, pass explicit paths. Example for your environment:
+
+- `--mvn "D:\\programs\\mvnd\\bin\\mvnd.exe"`
+- `--java "C:\\Program Files\\Java\\jdk-21\\bin\\java.exe"`
+
 ## Performance benchmark summary (2026-04-03)
 
 JMH suite `EntityJacksonJmhBenchmark.deserialize` (forks=3, warmup=6×2s, measure=8×2s) produced:

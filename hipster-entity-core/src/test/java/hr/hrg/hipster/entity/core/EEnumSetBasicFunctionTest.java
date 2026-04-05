@@ -57,6 +57,23 @@ class EEnumSetBasicFunctionTest {
     }
 
     @Test
+    void addOrdinalChangeReturnsFalseWhenValuesAreEqual() {
+        EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+
+        assertFalse(builder.addOrdinalChange(EnumTestUtil.Enum64.E05.ordinal(), "same", "same"));
+        assertFalse(builder.has(EnumTestUtil.Enum64.E05));
+    }
+
+    @Test
+    void addOrdinalChangeReturnsTrueWhenValueChangesEvenIfOrdinalAlreadyPresent() {
+        EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
+
+        assertTrue(builder.addOrdinalChange(EnumTestUtil.Enum64.E05.ordinal(), "old", "new"));
+        assertTrue(builder.addOrdinalChange(EnumTestUtil.Enum64.E05.ordinal(), "old2", "new2"));
+        assertTrue(builder.has(EnumTestUtil.Enum64.E05));
+    }
+
+    @Test
     void toImmutableReturnsEmptySetWhenNothingMarked() {
         EEnumSetBuilder<EnumTestUtil.Enum64> builder = EEnumSetBuilder.create(EnumTestUtil.Enum64.class);
 

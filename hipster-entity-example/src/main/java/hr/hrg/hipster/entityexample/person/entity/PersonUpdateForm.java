@@ -1,4 +1,4 @@
-package hr.hrg.hipster.entity.person;
+package hr.hrg.hipster.entityexample.person.entity;
 
 import hr.hrg.hipster.entity.api.View;
 import hr.hrg.hipster.entity.api.BooleanOption;

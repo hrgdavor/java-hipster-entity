@@ -1,5 +1,67 @@
 # Materialization levels for hipster-entity views
 
+Deserializing/reading (return value true/false if field exists, or enum: NO_CHNAGE, CHANGE, NOT_FOUND)
+
+- JSON  - set(String, Object)
+- JDBC  - set(int, Object)
+- MONGO - set(String, Object)
+- Proxy - set(String, Object) - **!! questionable** use, when we can go step further and generate impl of interface
+- BIN   - set(int, Object) - binary format for Fory, or MQ, requires adding enums to back validation
+
+User facing API may not need set(F extends Enum<F>, Object) as it is better to generate methods (implement Entity interface)
+
+
+sketch
+
+- L0 - record (readable)
+- L1 - interface - transient only using interface for shaping
+  - EntityForm - reads into tracking array backed proxy, to copy data to Entity, allowing mapping non direct proeprties
+  - EntityDTO - read from database into array backed proxy, allowing augmentation and derived data directly inquery
+- L2 - materialized backing store implementing updatable so no proxy needed
+  - EntityForm - same as L1
+  - EntityDTO - same as L1
+- L3 - materialized as record
+- L4 - materilaized builder
+
+
+
+Transient view 
+At T1 starts with Entity_ field enum and ViewMeta
+
+- T1 interface only - for EntityForm, EntityDTO that only define shape
+- T2 interface only - update interface -  for EntityForm, EntityDTO that only define shape and can make user defined addon
+
+Document view (inside document, not top level entity)
+At D0 starts with Entity_ field enum and ViewMeta
+
+- D0 record `@View`
+- D1 interface + inner record `@View`
+- D2 - read/write
+
+Entity view (Uses Identifiable)
+
+- E1 - read
+- E2 - read/write `@View` with `write != NONE`
+
+
+
+matrix 
+
+default/minimal reading is `PROXY`
+default writing is `NONE`
+
+- **read metadata boilerplate** - starting minimum when `@View`
+- interface 
+- record + `@View` OR inerface + record + `@View(read=RECORD)` 
+- **write interface boilerplate** 
+- (interface, inerface + record) + `@View(write=PROXY)`
+- updateable - materialization L1 (no need for proxy) `@View(write=UPDATEABLE)`
+- Builder - materialization L2 (concrete builder impl, includes updateable, fastest) `@View(write=BUILDER)`
+
+
+
+
+
 This document defines a graded strategy for view materialization, from metadata-only through concrete implementations and generated paths.
 
 ## Background

@@ -3,7 +3,7 @@ package hr.hrg.hipster.entity.core;
 import java.util.Objects;
 
 @SuppressWarnings("unchecked")
-public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBuilder<E> {
+public class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBuilder<E> {
 
     private final Class<E> enumClass;
     private final E[] universe;
@@ -336,4 +336,19 @@ public final class EEnumSetBuilderLarge<E extends Enum<E>> implements EEnumSetBu
         if (size == 0) return EEnumSetEmpty.of(enumClass);
         return new EEnumSetLarge<>(enumClass, bits, size);
     }
+
+    public static class Strict<E extends Enum<E>> extends EEnumSetBuilderLarge<E>   {
+        public Strict(Class<E> enumClass) {
+            super(enumClass);
+        }
+
+        @Override
+        public boolean addOrdinalChange(int ordinal, Object OldValue, Object NewValue) {
+            if (Objects.equals(OldValue, NewValue)) {
+                return false;
+            }
+            return super.addOrdinalChange(ordinal, OldValue, NewValue);
+        }
+    }
+
 }

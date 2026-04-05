@@ -3,7 +3,7 @@ package hr.hrg.hipster.entity.core;
 import java.util.Objects;
 
 @SuppressWarnings("unchecked")
-public final class EEnumSetBuilder64<E extends Enum<E>> implements EEnumSetBuilder<E> {
+public class EEnumSetBuilder64<E extends Enum<E>> implements EEnumSetBuilder<E> {
 
     private final Class<E> enumClass;
     private final E[] universe;
@@ -302,5 +302,19 @@ public final class EEnumSetBuilder64<E extends Enum<E>> implements EEnumSetBuild
     public EEnumSet<E> toImmutable() {
         if (size == 0) return EEnumSetEmpty.of(enumClass);
         return new EEnumSet64<>(enumClass, bits0, size);
+    }
+
+    public static class Strict<E extends Enum<E>> extends EEnumSetBuilder64<E>   {
+        public Strict(Class<E> enumClass) {
+            super(enumClass);
+        }
+
+        @Override
+        public boolean addOrdinalChange(int ordinal, Object OldValue, Object NewValue) {
+            if (Objects.equals(OldValue, NewValue)) {
+                return false;
+            }
+            return super.addOrdinalChange(ordinal, OldValue, NewValue);
+        }
     }
 }

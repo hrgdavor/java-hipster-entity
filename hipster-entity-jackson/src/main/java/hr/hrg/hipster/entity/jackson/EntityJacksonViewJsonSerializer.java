@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import hr.hrg.hipster.entity.api.EntityBase;
-import hr.hrg.hipster.entity.api.EntityReader;
+import hr.hrg.hipster.entity.api.ViewReader;
 import hr.hrg.hipster.entity.api.FieldDef;
 import hr.hrg.hipster.entity.api.ViewMeta;
 
@@ -24,11 +24,11 @@ public final class EntityJacksonViewJsonSerializer<V extends EntityBase<?>, F ex
 
     @Override
     public void serialize(V value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-        if (!(value instanceof EntityReader<?, ?, ?> reader)) {
+        if (!(value instanceof ViewReader<?, ?, ?> reader)) {
             throw new IllegalStateException("Value is not EntityReader: " + value.getClass());
         }
         @SuppressWarnings("unchecked")
-        EntityReader<?, V, ?> typedReader = (EntityReader<?, V, ?>) reader;
+        ViewReader<?, V, ?> typedReader = (ViewReader<?, V, ?>) reader;
         serializer.serialize(typedReader, gen);
     }
 }

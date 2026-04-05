@@ -85,7 +85,7 @@ This plan targets read and updatable view proxies backed by ordered array storag
 ### Phase 4: Record materialization alignment (done in example)
 
 - Add record types implementing read views (for example `PersonSummaryRecord`).
-- Provide factory method converting from `EntityReader` using field enum order.
+- Provide factory method converting from `ViewReader` using field enum order.
 - Keep record component order and field enum order intentionally synchronized.
 
 ### Phase 5: Validation and hardening (next)
@@ -131,3 +131,4 @@ Current high-level rules:
 5. Tooling expectations
 - Tooling MUST validate marker inheritance, package structure, and generated metadata assumptions.
 - Generation SHOULD remain deterministic and aligned with the accepted ADR set.
+

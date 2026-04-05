@@ -196,16 +196,86 @@ public class EntityMetadataGenerator {
 
     public static void main(String[] args) throws IOException {
         if (args.length < 2) {
-            System.err.println("Usage: java ... EntityMetadataGenerator <source-root> <output-dir>");
+            printUsage();
             System.exit(1);
         }
 
-        Path sourceRoot = Path.of(args[0]);
+        Path inputPath = Path.of(args[0]);
         Path outputDir = Path.of(args[1]);
-        generate(sourceRoot, outputDir);
+        Path sourceRoot = deriveSourceRoot(inputPath);
+        System.out.println("Using source root: " + sourceRoot);
+        if (inputPath.toString().endsWith(".java")) {
+            // For single file inputs, generate java boilerplate back into the source tree
+            generate(sourceRoot, outputDir, sourceRoot);
+        } else {
+            generate(sourceRoot, outputDir);
+        }
+    }
+
+    private static void printUsage() {
+        System.err.println("Usage: java -jar hipster-entity-tooling.jar <source-root|java-source-file> <output-dir>");
+        System.err.println("If the first argument is a .java file, the tool will locate the source root by searching for src/main/java or src/test/java.");
+        System.err.println("Generated view boilerplate for a single Java file is written back into the source tree using the underscore suffix convention.");
+    }
+
+    private static Path deriveSourceRoot(Path inputPath) {
+        if (Files.isDirectory(inputPath)) {
+            return inputPath;
+        }
+
+        if (inputPath.toString().endsWith(".java")) {
+            Path current = inputPath.getParent();
+            while (current != null) {
+                if (current.getFileName() != null && "java".equals(current.getFileName().toString())) {
+                    Path parent = current.getParent();
+                    if (parent != null && "main".equals(parent.getFileName().toString())
+                            && parent.getParent() != null
+                            && "src".equals(parent.getParent().getFileName().toString())) {
+                        return current;
+                    }
+                    if (parent != null && "test".equals(parent.getFileName().toString())
+                            && parent.getParent() != null
+                            && "src".equals(parent.getParent().getFileName().toString())) {
+                        return current;
+                    }
+                }
+                current = current.getParent();
+            }
+
+            // If no standard Maven source root is found, derive the source root from the package declaration.
+            try {
+                String source = Files.readString(inputPath);
+                ParseResult<CompilationUnit> parseResult = new JavaParser().parse(source);
+                CompilationUnit cu = parseResult.getResult().orElse(null);
+                if (cu != null && cu.getPackageDeclaration().isPresent()) {
+                    String packageName = cu.getPackageDeclaration().get().getNameAsString();
+                    Path parent = inputPath.getParent();
+                    String[] segments = packageName.split("\\.");
+                    for (int i = segments.length - 1; i >= 0 && parent != null; i--) {
+                        if (segments[i].equals(parent.getFileName().toString())) {
+                            parent = parent.getParent();
+                        } else {
+                            parent = null;
+                        }
+                    }
+                    if (parent != null) {
+                        return parent;
+                    }
+                }
+            } catch (IOException ignored) {
+                // Fall back to the file's parent directory if package parsing fails.
+            }
+            return inputPath.getParent();
+        }
+
+        return inputPath;
     }
 
     public static void generate(Path sourceRoot, Path outputDir) throws IOException {
+        generate(sourceRoot, outputDir, outputDir);
+    }
+
+    public static void generate(Path sourceRoot, Path outputDir, Path javaOutputRoot) throws IOException {
         Map<String, InterfaceInfo> interfaceMap = new HashMap<>();
 
         Files.walk(sourceRoot)
@@ -251,14 +321,20 @@ public class EntityMetadataGenerator {
 
         Map<String, List<InterfaceInfo>> packageToMarkers = new HashMap<>();
 
-        for (InterfaceInfo info : interfaceMap.values()) {
-            if (info.isMarkerEntity()) {
+        List<InterfaceInfo> markers = interfaceMap.values().stream()
+                .filter(InterfaceInfo::isMarkerEntity)
+                .toList();
+
+        for (InterfaceInfo info : markers) {
+            boolean derivedFromAnotherMarker = markers.stream()
+                    .anyMatch(other -> other != info && isDerivedFrom(info, other, interfaceMap));
+            if (!derivedFromAnotherMarker) {
                 packageToMarkers.computeIfAbsent(info.packageName, __ -> new ArrayList<>()).add(info);
             }
         }
 
-        for (List<InterfaceInfo> markers : packageToMarkers.values()) {
-            for (InterfaceInfo marker : markers) {
+        for (List<InterfaceInfo> roots : packageToMarkers.values()) {
+            for (InterfaceInfo marker : roots) {
                 String entityName = marker.name.endsWith("Entity") ? marker.name.substring(0, marker.name.length() - 6) : marker.name;
 
                 List<ViewMeta> views = interfaceMap.values().stream()
@@ -279,7 +355,7 @@ public class EntityMetadataGenerator {
                 for (ViewMeta view : views) {
                     InterfaceInfo viewInfo = interfaceMap.get(getQualifiedName(marker.packageName, view.name));
                     List<Property> fullProperties = collectViewProperties(viewInfo, marker, interfaceMap);
-                    generateViewPropertyEnum(outputDir, marker.packageName, view, fullProperties);
+                    generateViewPropertyEnum(javaOutputRoot, marker.packageName, view, fullProperties);
                 }
             }
         }
@@ -295,7 +371,7 @@ public class EntityMetadataGenerator {
         int lineNumber;
 
         boolean isMarkerEntity() {
-            return name.endsWith("Entity") && entityBaseIdType != null;
+            return entityBaseIdType != null;
         }
 
         public String getPackageName() { return packageName; }
@@ -617,46 +693,10 @@ public class EntityMetadataGenerator {
     }
 
     private static void generateViewPropertyEnum(Path outputDir, String packageName, ViewMeta view, List<Property> fullProperties) throws IOException {
-        String enumName = view.name + "Property";
-        Path packageDir = outputDir;
-        if (!packageName.isBlank()) {
-            packageDir = outputDir.resolve(packageName.replace('.', '/'));
-        }
-        Files.createDirectories(packageDir);
-
-        Path enumFile = packageDir.resolve(enumName + ".java");
-        StringBuilder sb = new StringBuilder();
-
-        if (!packageName.isBlank()) {
-            sb.append("package ").append(packageName).append(";\n\n");
-        }
-
-        sb.append("import java.lang.reflect.Type;\n");
-        sb.append("import hr.hrg.hipster.entity.api.TypeUtils;\n\n");
-
-        sb.append("public enum ").append(enumName).append(" {\n");
-
-        for (int i = 0; i < fullProperties.size(); i++) {
-            Property prop = fullProperties.get(i);
-            String constantName = prop.name; // use property name as enum constant identifier
-            sb.append("    ").append(constantName)
-                    .append("(").append(typeExpression(prop.type)).append(")");
-            if (i < view.properties.size() - 1) {
-                sb.append(",\n");
-            } else {
-                sb.append(";\n");
-            }
-        }
-
-        sb.append("\n    private final Type propertyType;\n\n");
-        sb.append("    ").append(enumName).append("(Type propertyType) {\n");
-        sb.append("        this.propertyType = propertyType;\n");
-        sb.append("    }\n\n");
-        sb.append("    public String getPropertyName() { return name(); }\n");
-        sb.append("    public Type getPropertyType() { return propertyType; }\n");
-        sb.append("}\n");
-
-        Files.writeString(enumFile, sb.toString());
+        FieldBoilerplateGenerator.builder(packageName, view.name, fullProperties)
+                .withPropertyEnumMode()
+                .withEnumTypeName(view.name + "_")
+                .generate(outputDir);
     }
 
     private static String toEnumConstant(String propertyName) {
