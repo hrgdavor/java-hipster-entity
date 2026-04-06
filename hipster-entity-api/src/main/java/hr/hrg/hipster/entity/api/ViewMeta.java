@@ -43,6 +43,9 @@ public interface ViewMeta<V, F extends Enum<F> & FieldDef> extends ForNameOrdina
     Type fieldTypeAt(int ordinal);
 
     /**
+     * Functional interface is used intentionally so caller can use it directly, and allow jvm to inline it into the 
+     * hot path of field-name lookup in deserializers, mappers, and adapters.
+     * 
      * Reverse lookup: field name → enum constant, or {@code null} if not found.
      * Equivalent to {@code Enum.valueOf} but null-safe and without throwing on unknown names.
      *
@@ -71,7 +74,7 @@ public interface ViewMeta<V, F extends Enum<F> & FieldDef> extends ForNameOrdina
      * @param name the field name (== {@code enum.name()})
      * @return the matching constant, or {@code null}
      */
-    F forName(String name);
+    FieldNameMapper<F> forName();
 
     /**
      * Discriminator field used by polymorphic view hierarchies.

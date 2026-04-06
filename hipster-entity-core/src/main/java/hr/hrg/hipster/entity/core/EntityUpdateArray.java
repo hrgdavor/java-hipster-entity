@@ -1,16 +1,17 @@
 package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.FieldNameMapper;
 import hr.hrg.hipster.entity.api.ViewMeta;
 import hr.hrg.hipster.entity.api.ViewWriter;
 
 public final class EntityUpdateArray<T, F extends Enum<F> & FieldDef> implements ViewWriter {
 
     private final Object[] values;
-    private ViewMeta<T, F> meta;
+    private final FieldNameMapper<F> forName;
 
     public EntityUpdateArray(ViewMeta<T, F> meta, Object ...values) {
-        this.meta = meta;
+        this.forName = meta.forName();
         this.values = values;
     }
 
@@ -32,7 +33,7 @@ public final class EntityUpdateArray<T, F extends Enum<F> & FieldDef> implements
 
     @Override
     public int set(String fieldName, Object value) {
-        F field  = meta.forName(fieldName);
+        F field  = forName.forName(fieldName);
         if (field == null) {
             return -1; // field not found
         }

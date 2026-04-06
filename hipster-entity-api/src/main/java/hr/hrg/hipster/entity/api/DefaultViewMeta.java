@@ -83,8 +83,8 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
     }
 
     @Override
-    public F forName(String name) {
-        return forName.forName(name);
+    public FieldNameMapper<F> forName() {
+        return forName;
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import hr.hrg.hipster.entity.api.EntityBase;
 import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.FieldNameMapper;
 import hr.hrg.hipster.entity.api.ViewMeta;
 
 import java.io.IOException;
@@ -90,6 +91,7 @@ public final class EntityJacksonViewDeserializer<V extends EntityBase<?>, F exte
     private final ValueReader[] readers;
     /** Interned field names parallel to readers[]; enables fast {@code ==} identity check. */
     private final String[] internedNames;
+    private FieldNameMapper<F> forName;
 
     /**
      * Builds the reader cache eagerly for the given view metadata.
@@ -99,6 +101,7 @@ public final class EntityJacksonViewDeserializer<V extends EntityBase<?>, F exte
      */
     public EntityJacksonViewDeserializer(ViewMeta<V, F> meta) {
         this.meta = meta;
+        this.forName = meta.forName();
         this.fieldCount = meta.fieldCount();
         this.readers = new ValueReader[fieldCount];
         this.internedNames = new String[fieldCount];
@@ -151,7 +154,7 @@ public final class EntityJacksonViewDeserializer<V extends EntityBase<?>, F exte
         for (int i = 0, n = fieldCount; i < n; i++) {
             if (name == names[i]) return i;
         }
-        F field = meta.forName(name);
+        F field = this.forName.forName(name);
         return field != null ? field.ordinal() : -1;
     }
 
@@ -167,7 +170,6 @@ public final class EntityJacksonViewDeserializer<V extends EntityBase<?>, F exte
 
     /* legacy: kept for binary compatibility with any direct callers not yet migrated */
     @Deprecated
-    @SuppressWarnings("unchecked")
     public <V2 extends EntityBase<?>, F2 extends Enum<F2> & FieldDef> V2 deserialize(
             ViewMeta<V2, F2> legacyMeta, JsonParser p) throws IOException {
         // Construct a temporary typed deserializer — builds reader cache per call.
@@ -176,7 +178,6 @@ public final class EntityJacksonViewDeserializer<V extends EntityBase<?>, F exte
     }
 
     @Deprecated
-    @SuppressWarnings("unchecked")
     public <V2 extends EntityBase<?>, F2 extends Enum<F2> & FieldDef> V2 deserializeSwitch(
             ViewMeta<V2, F2> legacyMeta, JsonParser p) throws IOException {
         return new EntityJacksonViewDeserializer<>(legacyMeta).deserialize(p);

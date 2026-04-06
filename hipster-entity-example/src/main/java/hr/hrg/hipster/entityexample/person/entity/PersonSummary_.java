@@ -1,6 +1,7 @@
 package hr.hrg.hipster.entityexample.person.entity;
 
 import java.lang.reflect.Type;
+import java.util.function.Function;
 
 import hr.hrg.hipster.entity.api.DefaultViewMeta;
 import hr.hrg.hipster.entity.api.FieldDef;
@@ -48,15 +49,16 @@ public enum PersonSummary_ implements FieldDef {
             PersonSummary.class,
             PersonSummary_.class,
             PersonSummary_::forName,
-            values -> {
-                EntityReadArray<PersonSummary, PersonSummary_> readArray =
-                        new EntityReadArray<>(PersonSummary_.class, values);
-
-                return ArrayBackedViewProxyFactory.createRead(
-                        PersonSummary.class,
-                        readArray,
-                        PersonSummary_::forName);
-            }
+            PersonSummary_::create
     );
 
+    private static PersonSummary create(Object ...values) {
+        EntityReadArray<PersonSummary, PersonSummary_> readArray =
+                new EntityReadArray<>(PersonSummary_.class, values);
+
+        return ArrayBackedViewProxyFactory.createRead(
+                PersonSummary.class,
+                readArray,
+                PersonSummary_::forName);
+    }
 }

@@ -20,7 +20,7 @@ public final class ArrayBackedViewProxyFactory {
             ViewMeta<V, F> meta,
             EntityReadArray<T, F> readArray
     ) {
-        return createRead(meta.viewType(), readArray, meta::forName);
+        return createRead(meta.viewType(), readArray, meta.forName());
     }
 
     public static <ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef, V>
