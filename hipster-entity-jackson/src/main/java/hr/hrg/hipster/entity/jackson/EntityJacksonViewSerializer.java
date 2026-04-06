@@ -56,7 +56,7 @@ public final class EntityJacksonViewSerializer<V extends EntityBase<?>, F extend
         }
     }
 
-    public void serialize(ViewReader<?, V, ?> entity, JsonGenerator gen) throws IOException {
+    public void serialize(ViewReader entity, JsonGenerator gen) throws IOException {
         gen.writeStartObject();
 
         for (int i = 0, fieldCount = fields.length; i < fieldCount; i++) {

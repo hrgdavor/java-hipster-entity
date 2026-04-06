@@ -20,7 +20,7 @@ package hr.hrg.hipster.entity.api;
  * @param <V> the view interface type
  * @param <F> the companion field enum type, must implement {@link FieldDef}
  */
-public interface ViewMeta<V, F extends Enum<F> & FieldDef> {
+public interface ViewMeta<V, F extends Enum<F> & FieldDef> extends ForNameOrdinal {
 
     /** The view interface class. */
     Class<V> viewType();

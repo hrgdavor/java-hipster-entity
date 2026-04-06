@@ -1,6 +1,11 @@
 package hr.hrg.hipster.entity.core;
 
 import hr.hrg.hipster.entity.api.EntityBase;
+import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.ForNameOrdinal;
+import hr.hrg.hipster.entity.api.ForNameOrdinalImpl;
+import hr.hrg.hipster.entity.core.EnumTestUtil.Enum64;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
@@ -14,23 +19,38 @@ import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.Throughput)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class EEnumSetTrackingJmhBenchmark {
+public class EEnumSetTrackingJmhBenchmark{
 
-    enum E64 {
+    enum E64 implements FieldDef{
         A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15,
         A16, A17, A18, A19, A20, A21, A22, A23, A24, A25, A26, A27, A28, A29, A30, A31,
         A32, A33, A34, A35, A36, A37, A38, A39, A40, A41, A42, A43, A44, A45, A46, A47,
-        A48, A49, A50, A51, A52, A53, A54, A55, A56, A57, A58, A59, A60, A61, A62, A63
-    }
+        A48, A49, A50, A51, A52, A53, A54, A55, A56, A57, A58, A59, A60, A61, A62, A63,
+        ;
 
-    enum E96 {
+        @Override
+        public Class<?> javaType() {
+            return String.class;
+        }
+    }
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    static ForNameOrdinal forNameOrdinal64 = new ForNameOrdinalImpl(E64.class);
+
+    enum E96 implements FieldDef{
         B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15,
         B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26, B27, B28, B29, B30, B31,
         B32, B33, B34, B35, B36, B37, B38, B39, B40, B41, B42, B43, B44, B45, B46, B47,
         B48, B49, B50, B51, B52, B53, B54, B55, B56, B57, B58, B59, B60, B61, B62, B63,
         B64, B65, B66, B67, B68, B69, B70, B71, B72, B73, B74, B75, B76, B77, B78, B79,
-        B80, B81, B82, B83, B84, B85, B86, B87, B88, B89, B90, B91, B92, B93, B94, B95
+        B80, B81, B82, B83, B84, B85, B86, B87, B88, B89, B90, B91, B92, B93, B94, B95,
+        ;
+        @Override
+        public Class<?> javaType() {
+            return String.class;
+        }
     }
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    static ForNameOrdinal forNameOrdinal96 = new ForNameOrdinalImpl(E96.class);
 
     static final class Dummy64 implements EntityBase<Integer> {}
 
@@ -66,8 +86,8 @@ public class EEnumSetTrackingJmhBenchmark {
 
     @State(Scope.Thread)
     public static class Tracking64State {
-        EntityUpdateTrackingArray64<Integer, Dummy64, E64> concrete;
-        EntityUpdateTrackingArray<Integer, Dummy64, E64> generic;
+        EntityUpdateTrackingArray64<Dummy64, E64> concrete;
+        EntityUpdateTrackingArray<Dummy64, E64> generic;
         int ordinal;
 
         @Setup(Level.Iteration)
@@ -75,7 +95,7 @@ public class EEnumSetTrackingJmhBenchmark {
             Object[] values = new Object[E64.values().length];
             values[0] = 1;
             for (int i = 1; i < values.length; i++) values[i] = i;
-            concrete = new EntityUpdateTrackingArray64<>(E64.class, values);
+            concrete = new EntityUpdateTrackingArray64<>(forNameOrdinal64, Enum64.values().length, values);
             generic = concrete;
             ordinal = 31;
         }
@@ -83,8 +103,8 @@ public class EEnumSetTrackingJmhBenchmark {
 
     @State(Scope.Thread)
     public static class Tracking96State {
-        EntityUpdateTrackingArrayLarge<Integer, Dummy96, E96> concrete;
-        EntityUpdateTrackingArray<Integer, Dummy96, E96> generic;
+        EntityUpdateTrackingArrayLarge<Dummy96, E96> concrete;
+        EntityUpdateTrackingArray<Dummy96, E96> generic;
         int ordinal;
 
         @Setup(Level.Iteration)
@@ -92,7 +112,7 @@ public class EEnumSetTrackingJmhBenchmark {
             Object[] values = new Object[E96.values().length];
             values[0] = 1;
             for (int i = 1; i < values.length; i++) values[i] = i;
-            concrete = new EntityUpdateTrackingArrayLarge<>(E96.class, values);
+            concrete = new EntityUpdateTrackingArrayLarge<>(forNameOrdinal96, E96.values().length, values);
             generic = concrete;
             ordinal = 72;
         }
@@ -136,15 +156,15 @@ public class EEnumSetTrackingJmhBenchmark {
 
     @State(Scope.Thread)
     public static class PrefilledTracking64State {
-        EntityUpdateTrackingArray64<Integer, Dummy64, E64> concrete;
-        EntityUpdateTrackingArray<Integer, Dummy64, E64> generic;
+        EntityUpdateTrackingArray64<Dummy64, E64> concrete;
+        EntityUpdateTrackingArray<Dummy64, E64> generic;
 
         @Setup(Level.Iteration)
         public void setup() {
             Object[] values = new Object[E64.values().length];
             values[0] = 1;
             for (int i = 1; i < values.length; i++) values[i] = i;
-            concrete = new EntityUpdateTrackingArray64<>(E64.class, values);
+            concrete = new EntityUpdateTrackingArray64<>(forNameOrdinal64, E64.values().length, values);
             generic = concrete;
         }
 
@@ -157,15 +177,15 @@ public class EEnumSetTrackingJmhBenchmark {
 
     @State(Scope.Thread)
     public static class PrefilledTracking96State {
-        EntityUpdateTrackingArrayLarge<Integer, Dummy96, E96> concrete;
-        EntityUpdateTrackingArray<Integer, Dummy96, E96> generic;
+        EntityUpdateTrackingArrayLarge<Dummy96, E96> concrete;
+        EntityUpdateTrackingArray<Dummy96, E96> generic;
 
         @Setup(Level.Iteration)
         public void setup() {
             Object[] values = new Object[E96.values().length];
             values[0] = 1;
             for (int i = 1; i < values.length; i++) values[i] = i;
-            concrete = new EntityUpdateTrackingArrayLarge<>(E96.class, values);
+            concrete = new EntityUpdateTrackingArrayLarge<>(forNameOrdinal96, E96.values().length, values);
             generic = concrete;
         }
 

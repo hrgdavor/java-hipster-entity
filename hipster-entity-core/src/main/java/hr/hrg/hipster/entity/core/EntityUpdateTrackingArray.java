@@ -1,6 +1,8 @@
 package hr.hrg.hipster.entity.core;
 
-import hr.hrg.hipster.entity.api.EntityBase;
+import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.ForNameOrdinal;
+import hr.hrg.hipster.entity.api.ViewMeta;
 import hr.hrg.hipster.entity.api.ViewWriter;
 
 import java.util.Objects;
@@ -11,28 +13,26 @@ import java.util.Objects;
  * Concrete subclasses hold their builder as a concrete type so the JVM can
  * statically dispatch (and inline) {@link #mark}/{@link #clear} on the hot path.
  */
-public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements ViewWriter<ID, T, F> {
+public abstract class EntityUpdateTrackingArray<T, F extends Enum<F> & FieldDef> implements ViewWriter {
 
-    protected final Class<F> enumClass;
     protected final Object[] values;
-    protected final ID id;
+    private ForNameOrdinal forNameOrdinal;
 
     @SuppressWarnings("unchecked")
-    protected EntityUpdateTrackingArray(Class<F> enumClass, Object[] values) {
-        if (enumClass.getEnumConstants().length != values.length) {
+    protected EntityUpdateTrackingArray(ForNameOrdinal forNameOrdinal, int fieldCount, Object[] values) {
+        this.forNameOrdinal = forNameOrdinal;
+        if (fieldCount != values.length) {
             throw new IllegalArgumentException("View field count and data provided lengths do not match");
         }
-        this.id = (ID) values[0];
-        this.enumClass = enumClass;
-        this.values = values;
+        this.values = values;   
     }
 
     /** Factory: picks {@link EntityUpdateTrackingArray64} or {@link EntityUpdateTrackingArrayLarge}. */
-    public static <ID, T extends EntityBase<ID>, F extends Enum<F>>
-    EntityUpdateTrackingArray<ID, T, F> create(Class<F> enumClass, Object... values) {
-        return enumClass.getEnumConstants().length <= 64
-                ? new EntityUpdateTrackingArray64<>(enumClass, values)
-                : new EntityUpdateTrackingArrayLarge<>(enumClass, values);
+    public static <T, F extends Enum<F> & FieldDef>
+    EntityUpdateTrackingArray<T, F> create(ViewMeta<T,F> meta, Object... values) {
+        return meta.fieldCount() <= 64
+                ? new EntityUpdateTrackingArray64<>(meta, values)
+                : new EntityUpdateTrackingArrayLarge<>(meta, values);
     }
 
     /** Mark field ordinal as changed. Returns {@code true} if the bit was newly set. */
@@ -51,22 +51,12 @@ public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F 
     public abstract EEnumSetBuilder<F> getChanges();
 
     @Override
-    public Object get(F field) {
-        return values[field.ordinal()];
-    }
-
-    @Override
     public Object get(int fieldOrdinal) {
         return values[fieldOrdinal];
     }
 
     @Override
-    public Object set(F field, Object value) {
-        return set(field.ordinal(), value);
-    }
-
-    @Override
-    public Object set(int fieldOrdinal, Object value) {
+    public void set(int fieldOrdinal, Object value) {
         if (fieldOrdinal < 0 || fieldOrdinal >= values.length) {
             throw new IndexOutOfBoundsException("Field ordinal out of bounds: " + fieldOrdinal);
         }
@@ -76,11 +66,20 @@ public abstract class EntityUpdateTrackingArray<ID, T extends EntityBase<ID>, F 
 
         Object previous = values[fieldOrdinal];
         if (Objects.equals(previous, value)) {
-            return previous;
+            return;
         }
 
         values[fieldOrdinal] = value;
         mark(fieldOrdinal);
-        return previous;
+    }
+
+    @Override
+    public int set(String fieldName, Object value) {
+        int field  = forNameOrdinal.forNameOrdinal(fieldName);
+        if (field == -1) {
+            return -1; // field not found
+        }
+        set(field, value);
+        return field;
     }
 }

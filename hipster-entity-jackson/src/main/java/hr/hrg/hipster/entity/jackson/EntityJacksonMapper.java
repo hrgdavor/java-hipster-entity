@@ -25,7 +25,7 @@ public final class EntityJacksonMapper {
     }
 
     public static <V extends EntityBase<?>, F extends Enum<F> & FieldDef> void toJson(ViewMeta<V, F> meta,
-                                                                 ViewReader<?, V, ?> entity,
+                                                                 ViewReader entity,
                                                                  java.io.Writer writer) {
         try (JsonGenerator gen = OBJECT_MAPPER.createGenerator(writer)) {
             new EntityJacksonViewSerializer<>(meta).serialize(entity, gen);

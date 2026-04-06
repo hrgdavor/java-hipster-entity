@@ -13,22 +13,18 @@ import java.io.IOException;
 public final class EntityJacksonViewJsonSerializer<V extends EntityBase<?>, F extends Enum<F> & FieldDef>
         extends JsonSerializer<V> {
 
-    private final ViewMeta<V, F> meta;
-
     private final EntityJacksonViewSerializer<V, F> serializer;
 
     public EntityJacksonViewJsonSerializer(ViewMeta<V, F> meta) {
-        this.meta = meta;
         this.serializer = new EntityJacksonViewSerializer<>(meta);
     }
 
     @Override
     public void serialize(V value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-        if (!(value instanceof ViewReader<?, ?, ?> reader)) {
+        if (!(value instanceof ViewReader reader)) {
             throw new IllegalStateException("Value is not EntityReader: " + value.getClass());
         }
-        @SuppressWarnings("unchecked")
-        ViewReader<?, V, ?> typedReader = (ViewReader<?, V, ?>) reader;
+        ViewReader typedReader = (ViewReader) reader;
         serializer.serialize(typedReader, gen);
     }
 }

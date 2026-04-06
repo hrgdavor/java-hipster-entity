@@ -1,27 +1,17 @@
 package hr.hrg.hipster.entity.core;
 
-import hr.hrg.hipster.entity.api.EntityBase;
+import hr.hrg.hipster.entity.api.FieldDef;
+import hr.hrg.hipster.entity.api.ViewMeta;
 import hr.hrg.hipster.entity.api.ViewWriter;
-import hr.hrg.hipster.entity.api.ViewReader;
 
-public final class EntityUpdateArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements ViewWriter<ID,T, F> {
+public final class EntityUpdateArray<T, F extends Enum<F> & FieldDef> implements ViewWriter {
 
-    private final Class<F> enumClass;
     private final Object[] values;
-    private final ID id;
+    private ViewMeta<T, F> meta;
 
-    public EntityUpdateArray(Class<F> enumClass, Object ...values) {
-        if(enumClass.getEnumConstants().length != values.length) {
-            throw new IllegalArgumentException("View field count and data provided lengths do not match");
-        }
-        this.id = (ID)values[0];
-        this.enumClass = enumClass;
+    public EntityUpdateArray(ViewMeta<T, F> meta, Object ...values) {
+        this.meta = meta;
         this.values = values;
-    }
-
-    @Override
-    public Object get(F field) {
-        return values[field.ordinal()];
     }
 
     @Override
@@ -30,20 +20,23 @@ public final class EntityUpdateArray<ID, T extends EntityBase<ID>, F extends Enu
     }
 
     @Override
-    public Object set(F field, Object value) {
-        return set(field.ordinal(), value);
-    }
-
-    @Override
-    public Object set(int fieldOrdinal, Object value) {
+    public void set(int fieldOrdinal, Object value) {
         if (fieldOrdinal < 0 || fieldOrdinal >= values.length) {
             throw new IndexOutOfBoundsException("Field ordinal out of bounds: " + fieldOrdinal);
         }
         if (fieldOrdinal == 0) {
             throw new UnsupportedOperationException("ID field is immutable in EntityUpdateArray");
         }
-        Object previous = values[fieldOrdinal];
         values[fieldOrdinal] = value;
-        return previous;
+    }
+
+    @Override
+    public int set(String fieldName, Object value) {
+        F field  = meta.forName(fieldName);
+        if (field == null) {
+            return -1; // field not found
+        }
+        values[field.ordinal()] = value;
+        return field.ordinal();
     }
 }

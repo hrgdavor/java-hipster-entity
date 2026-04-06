@@ -41,7 +41,7 @@ public final class ArrayBackedViewProxyFactory {
     public static <ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef, V>
     V createUpdatable(
             Class<V> viewType,
-            EntityUpdateTrackingArray<ID, T, F> updateArray,
+            EntityUpdateTrackingArray<T, F> updateArray,
             hr.hrg.hipster.entity.api.FieldNameMapper<F> fieldByMethodName
     ) {
         InvocationHandler handler = new UpdatableHandler<>(updateArray, fieldByMethodName::forName, viewType.getSimpleName() + "Proxy");
@@ -90,16 +90,16 @@ public final class ArrayBackedViewProxyFactory {
             if (field == null) {
                 throw new IllegalArgumentException("Unsupported accessor: " + method.getName());
             }
-            return readArray.get(field);
+            return readArray.get(field.ordinal());
         }
     }
 
-    private static final class UpdatableHandler<ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef> implements InvocationHandler {
-        private final EntityUpdateTrackingArray<ID, T, F> updateArray;
+    private static final class UpdatableHandler<T, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef> implements InvocationHandler {
+        private final EntityUpdateTrackingArray<T, F> updateArray;
         private final Function<String, F> fieldByMethodName;
         private final String label;
 
-        private UpdatableHandler(EntityUpdateTrackingArray<ID, T, F> updateArray, Function<String, F> fieldByMethodName, String label) {
+        private UpdatableHandler(EntityUpdateTrackingArray<T, F> updateArray, Function<String, F> fieldByMethodName, String label) {
             this.updateArray = updateArray;
             this.fieldByMethodName = fieldByMethodName;
             this.label = label;
@@ -127,29 +127,30 @@ public final class ArrayBackedViewProxyFactory {
                 if (field == null) {
                     throw new IllegalArgumentException("Unsupported accessor: " + name);
                 }
-                return updateArray.get(field);
+                return updateArray.get(field.ordinal());
             }
 
             if (name.equals("get") && parameterCount == 1) {
                 @SuppressWarnings("unchecked")
                 F field = (F) args[0];
-                return updateArray.get(field);
+                return updateArray.get(field.ordinal());
             }
 
             if (name.equals("set") && parameterCount == 2) {
                 @SuppressWarnings("unchecked")
                 F field = (F) args[0];
                 Object value = args[1];
-                Object previous = updateArray.set(field, value);
-                return !Objects.equals(previous, value);
+                updateArray.set(field.ordinal(), value);
+                // void methods: You must return null. Returning any other value will cause a ClassCastException at runtime 
+                // because the proxy expects no result.
+                return null;
             }
 
             if (parameterCount == 1) {
-                F field = fieldByMethodName.apply(name);
-                if (field == null) {
+                int ordinal = updateArray.set(name, args[0]);
+                if (ordinal == -1) {
                     throw new IllegalArgumentException("Unsupported mutator: " + name);
                 }
-                updateArray.set(field, args[0]);
                 return proxy;
             }
 

@@ -3,7 +3,7 @@ package hr.hrg.hipster.entity.core;
 import hr.hrg.hipster.entity.api.EntityBase;
 import hr.hrg.hipster.entity.api.ViewReader;
 
-public final class EntityReadArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements ViewReader<ID,T, F> {
+public final class EntityReadArray<ID, T extends EntityBase<ID>, F extends Enum<F>> implements ViewReader {
 
     private final Class<F> enumClass;
     private final Object[] values;
@@ -16,11 +16,6 @@ public final class EntityReadArray<ID, T extends EntityBase<ID>, F extends Enum<
         this.id = (ID)values[0];
         this.enumClass = enumClass;
         this.values = values;
-    }
-
-    @Override
-    public Object get(F field) {
-        return values[field.ordinal()];
     }
 
     @Override

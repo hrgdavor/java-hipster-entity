@@ -87,6 +87,15 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
     }
 
     @Override
+    public int forNameOrdinal(String fieldName) {
+        F field = forName.forName(fieldName);
+        if (field == null) {
+            return -1;
+        }
+        return field.ordinal();
+    }
+
+    @Override
     public F discriminatorField() {
         return discriminatorField;
     }
