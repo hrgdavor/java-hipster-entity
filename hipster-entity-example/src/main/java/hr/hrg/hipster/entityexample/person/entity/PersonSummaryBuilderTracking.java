@@ -3,14 +3,13 @@ package hr.hrg.hipster.entityexample.person.entity;
 import java.util.List;
 import java.util.Map;
 
-import hr.hrg.hipster.entity.api.ViewWriter;
 import hr.hrg.hipster.entity.core.EEnumSetBuilder64;
 import hr.hrg.hipster.entity.core.ViewChangeTracking;
 
 // generated when @View(tracking=true) is used on the PersonSummary interface
-public class PersonSummaryBuilderTracking implements PersonSummary, ViewWriter,ViewChangeTracking<PersonSummary_, EEnumSetBuilder64<PersonSummary_>> {
+public class PersonSummaryBuilderTracking implements PersonSummary.Write, ViewChangeTracking<PersonSummary_, EEnumSetBuilder64<PersonSummary_>> {
     // tracking variant
-    final EEnumSetBuilder64<PersonSummary_> modifiedFields;
+    final EEnumSetBuilder64<PersonSummary_> mf;
 
     Long id;
     String firstName;
@@ -19,6 +18,21 @@ public class PersonSummaryBuilderTracking implements PersonSummary, ViewWriter,V
     String departmentName;
     Map<String, List<Long>> metadata;
 
+    public PersonSummaryBuilderTracking(PersonSummary source) {
+        this.mf = new EEnumSetBuilder64<>(PersonSummary_.class);
+
+        this.id = source.id();
+        this.firstName = source.firstName();
+        this.lastName = source.lastName();
+        this.age = source.age();
+        this.departmentName = source.departmentName();
+        this.metadata = source.metadata();
+    }
+
+    PersonSummary build(){
+        return new PersonSummary.Record(id, firstName, lastName, age, departmentName, metadata);
+    }
+    
     public Long id(){return id;}
     public String firstName(){return firstName;}
     public String lastName(){return lastName;}
@@ -29,12 +43,12 @@ public class PersonSummaryBuilderTracking implements PersonSummary, ViewWriter,V
         
     // tracking variant
     public PersonSummaryBuilderTracking() {
-        this.modifiedFields = new EEnumSetBuilder64<>(PersonSummary_.class);
+        this.mf = new EEnumSetBuilder64<>(PersonSummary_.class);
     }
 
     // tracking variant
     PersonSummaryBuilderTracking(EEnumSetBuilder64<PersonSummary_> modifiedFields) {
-        this.modifiedFields = modifiedFields;
+        this.mf = modifiedFields;
     }
 
     // tracking variant
@@ -57,42 +71,43 @@ public class PersonSummaryBuilderTracking implements PersonSummary, ViewWriter,V
     }
 
     @Override
-    public boolean isChanged() {return modifiedFields.size() > 0;}
+    public boolean isChanged() {return mf.size() > 0;}
 
     @Override
-    public EEnumSetBuilder64<PersonSummary_> changes() {return modifiedFields;}
+    public EEnumSetBuilder64<PersonSummary_> changes() {return mf;}
 
-    PersonSummaryBuilderTracking id(Long value){ modifiedFields.addOrdinalChange(0, id, value); id = value; return this;}
-    PersonSummaryBuilderTracking firstName(String value){ modifiedFields.addOrdinalChange(1, firstName, value); firstName = value; return this;}
-    PersonSummaryBuilderTracking lastName(String value){ modifiedFields.addOrdinalChange(2, lastName, value); lastName = value; return this;}
-    PersonSummaryBuilderTracking age(Integer value){ modifiedFields.addOrdinalChange(3, age, value); age = value; return this;}
-    PersonSummaryBuilderTracking departmentName(String value){ modifiedFields.addOrdinalChange(4, departmentName, value); departmentName = value; return this;}
-    PersonSummaryBuilderTracking metadata(Map<String, List<Long>> value){ modifiedFields.addOrdinalChange(5, metadata, value); metadata = value; return this;}        
+    public PersonSummaryBuilderTracking id(Long value){ mf.addOrdinalChange(0, id, value); id = value; return this;}
+    public PersonSummaryBuilderTracking firstName(String value){ mf.addOrdinalChange(1, firstName, value); firstName = value; return this;}
+    public PersonSummaryBuilderTracking lastName(String value){ mf.addOrdinalChange(2, lastName, value); lastName = value; return this;}
+    public PersonSummaryBuilderTracking age(Integer value){ mf.addOrdinalChange(3, age, value); age = value; return this;}
+    public PersonSummaryBuilderTracking departmentName(String value){ mf.addOrdinalChange(4, departmentName, value); departmentName = value; return this;}
+    public PersonSummaryBuilderTracking metadata(Map<String, List<Long>> value){ mf.addOrdinalChange(5, metadata, value); metadata = value; return this;}        
 
 
     @Override
     public void set(int field, Object value) {
         switch (field) {
-            case 0 -> { modifiedFields.addOrdinalChange(0, id, (Long)value); id = (Long) value;  }
-            case 1 -> { modifiedFields.addOrdinalChange(1, firstName, (String)value); firstName = (String) value; }
-            case 2 -> { modifiedFields.addOrdinalChange(2, lastName, (String)value); lastName = (String) value; }
-            case 3 -> { modifiedFields.addOrdinalChange(3, age, (Integer)value); age = (Integer) value; }
-            case 4 -> { modifiedFields.addOrdinalChange(4, departmentName, (String)value); departmentName = (String) value; }
-            case 5 -> { modifiedFields.addOrdinalChange(5, metadata, (Map<String, List<Long>>)value); metadata = (Map<String, List<Long>>) value; }
+            case 0 -> { mf.addOrdinalChange(0, id, (Long)value); id = (Long) value;  }
+            case 1 -> { mf.addOrdinalChange(1, firstName, (String)value); firstName = (String) value; }
+            case 2 -> { mf.addOrdinalChange(2, lastName, (String)value); lastName = (String) value; }
+            case 3 -> { mf.addOrdinalChange(3, age, (Integer)value); age = (Integer) value; }
+            case 4 -> { mf.addOrdinalChange(4, departmentName, (String)value); departmentName = (String) value; }
+            case 5 -> { mf.addOrdinalChange(5, metadata, (Map<String, List<Long>>)value); metadata = (Map<String, List<Long>>) value; }
         }
     }
 
     @Override
     public int set(String field, Object value) {
         switch (field) {
-            case "id":             modifiedFields.addOrdinalChange(0, id, (Long)value); id = (Long) value; return 0;
-            case "firstName":      modifiedFields.addOrdinalChange(1, firstName, (String)value); firstName = (String) value; return 1;
-            case "lastName":       modifiedFields.addOrdinalChange(2, lastName, (String)value); lastName = (String) value; return 2;
-            case "age":            modifiedFields.addOrdinalChange(3, age, (Integer)value); age = (Integer) value; return 3;
-            case "departmentName": modifiedFields.addOrdinalChange(4, departmentName, (String)value); departmentName = (String) value; return 4;
-            case "metadata":       modifiedFields.addOrdinalChange(5, metadata, (Map<String, List<Long>>)value); metadata = (Map<String, List<Long>>) value; return 5;
+            case "id":             mf.addOrdinalChange(0, id, (Long)value); id = (Long) value; return 0;
+            case "firstName":      mf.addOrdinalChange(1, firstName, (String)value); firstName = (String) value; return 1;
+            case "lastName":       mf.addOrdinalChange(2, lastName, (String)value); lastName = (String) value; return 2;
+            case "age":            mf.addOrdinalChange(3, age, (Integer)value); age = (Integer) value; return 3;
+            case "departmentName": mf.addOrdinalChange(4, departmentName, (String)value); departmentName = (String) value; return 4;
+            case "metadata":       mf.addOrdinalChange(5, metadata, (Map<String, List<Long>>)value); metadata = (Map<String, List<Long>>) value; return 5;
         }
         // unknown field, could throw or ignore, here we choose to ignore and return -1 to indicate no field was set
         return -1;
     }
+
 }

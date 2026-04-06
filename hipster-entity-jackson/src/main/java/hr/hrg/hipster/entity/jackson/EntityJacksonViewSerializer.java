@@ -7,6 +7,7 @@ import hr.hrg.hipster.entity.api.FieldDef;
 import hr.hrg.hipster.entity.api.ViewMeta;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 
 public final class EntityJacksonViewSerializer<V extends EntityBase<?>, F extends Enum<F> & FieldDef> {
 
@@ -36,7 +37,7 @@ public final class EntityJacksonViewSerializer<V extends EntityBase<?>, F extend
             F f = fields[i];
             final String fieldName = f.name();
             fieldNames[i] = fieldName;
-            Class<?> type = f.javaType();
+            Type type = f.javaType();
 
             if (type == String.class) {
                 fieldTypeCode[i] = TYPE_STRING;

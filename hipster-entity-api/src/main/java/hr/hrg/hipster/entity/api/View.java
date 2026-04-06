@@ -11,9 +11,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface View {
-    BooleanOption read() default BooleanOption.DEFAULT;
-    BooleanOption write() default BooleanOption.DEFAULT;
+    WriteOption write() default WriteOption.DEFAULT;
     String discriminatorField() default "";
     Class<?>[] addons() default {};
-    boolean tracking() default false;
 }

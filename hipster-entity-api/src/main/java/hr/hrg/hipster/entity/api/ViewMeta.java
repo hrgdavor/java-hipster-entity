@@ -1,5 +1,7 @@
 package hr.hrg.hipster.entity.api;
 
+import java.lang.reflect.Type;
+
 /**
  * Metadata and factory contract for a single array-backed entity view.
  *
@@ -38,7 +40,7 @@ public interface ViewMeta<V, F extends Enum<F> & FieldDef> extends ForNameOrdina
     String fieldNameAt(int ordinal);
 
     /** Field Java type for given ordinal. */
-    Class<?> fieldTypeAt(int ordinal);
+    Type fieldTypeAt(int ordinal);
 
     /**
      * Reverse lookup: field name → enum constant, or {@code null} if not found.

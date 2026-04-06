@@ -1,6 +1,5 @@
 package hr.hrg.hipster.entityexample.paymentMethod.entity;
 
-import hr.hrg.hipster.entity.api.BooleanOption;
 import hr.hrg.hipster.entity.api.EntityBase;
 import hr.hrg.hipster.entity.api.Identifiable;
 import hr.hrg.hipster.entity.api.View;
@@ -11,7 +10,7 @@ import java.time.Instant;
 /**
  * Base payment method entity with shared transaction information.
  */
-@View(read = BooleanOption.TRUE, write = BooleanOption.FALSE, addons = {PaymentMethodAuditable.class})
+@View(addons = {PaymentMethodAuditable.class})
 public sealed interface PaymentMethod extends EntityBase<Long>, Identifiable<Long> 
     permits 
     BankTransferPaymentMethod, 

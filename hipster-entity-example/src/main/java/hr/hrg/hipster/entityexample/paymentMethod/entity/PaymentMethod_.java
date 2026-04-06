@@ -60,7 +60,7 @@ public enum PaymentMethod_ implements FieldDef {
             PaymentMethod_.class,
             NAME_MAPPER,
             values -> {
-                EntityReadArray<Long, PaymentMethod, PaymentMethod_> readArray =
+                EntityReadArray<PaymentMethod, PaymentMethod_> readArray =
                         new EntityReadArray<>(PaymentMethod_.class, values);
                 return ArrayBackedViewProxyFactory.createRead(
                         PaymentMethod.class,

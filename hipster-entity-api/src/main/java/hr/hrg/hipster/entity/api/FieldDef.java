@@ -1,5 +1,7 @@
 package hr.hrg.hipster.entity.api;
 
+import java.lang.reflect.Type;
+
 /**
  * Implemented by all field-definition enums that describe the fields of an entity view.
  *
@@ -23,7 +25,7 @@ public interface FieldDef {
      *
      * @return the field's Java type; never {@code null}
      */
-    Class<?> javaType();
+    Type javaType();
 
     /**
      * The name of the field, which must match the zero-argument accessor method

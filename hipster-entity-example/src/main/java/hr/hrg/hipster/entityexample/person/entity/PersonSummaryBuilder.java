@@ -3,16 +3,27 @@ package hr.hrg.hipster.entityexample.person.entity;
 import java.util.List;
 import java.util.Map;
 
-import hr.hrg.hipster.entity.api.ViewWriter;
-
 // generated when @View(tracking=false) is used on the PersonSummary interface
-public class PersonSummaryBuilder implements PersonSummary, ViewWriter {
+public final class PersonSummaryBuilder implements PersonSummary.Write {
     Long id;
     String firstName;
     String lastName;
     Integer age;
     String departmentName;
     Map<String, List<Long>> metadata;
+
+    public PersonSummaryBuilder(PersonSummary source) {
+        this.id = source.id();
+        this.firstName = source.firstName();
+        this.lastName = source.lastName();
+        this.age = source.age();
+        this.departmentName = source.departmentName();
+        this.metadata = source.metadata();
+    }
+
+    PersonSummary build(){
+        return new PersonSummary.Record(id, firstName, lastName, age, departmentName, metadata);
+    }
 
     public Long id(){return id;}
     public String firstName(){return firstName;}
@@ -33,12 +44,12 @@ public class PersonSummaryBuilder implements PersonSummary, ViewWriter {
         };
     }
 
-    PersonSummaryBuilder id(Long value){ id = value; return this;}
-    PersonSummaryBuilder firstName(String value){ firstName = value; return this;}
-    PersonSummaryBuilder lastName(String value){ lastName = value; return this;}
-    PersonSummaryBuilder age(Integer value){ age = value; return this;}
-    PersonSummaryBuilder departmentName(String value){ departmentName = value; return this;}
-    PersonSummaryBuilder metadata(Map<String, List<Long>> value){ metadata = value; return this;}
+    public PersonSummaryBuilder id(Long value){ id = value; return this;}
+    public PersonSummaryBuilder firstName(String value){ firstName = value; return this;}
+    public PersonSummaryBuilder lastName(String value){ lastName = value; return this;}
+    public PersonSummaryBuilder age(Integer value){ age = value; return this;}
+    public PersonSummaryBuilder departmentName(String value){ departmentName = value; return this;}
+    public PersonSummaryBuilder metadata(Map<String, List<Long>> value){ metadata = value; return this;}
 
 
     public int set(String field, Object value){

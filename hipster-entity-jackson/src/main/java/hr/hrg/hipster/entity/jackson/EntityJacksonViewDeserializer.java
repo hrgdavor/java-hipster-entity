@@ -10,6 +10,7 @@ import hr.hrg.hipster.entity.api.FieldDef;
 import hr.hrg.hipster.entity.api.ViewMeta;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 
 /**
  * Zero-allocation (in hot path) Jackson deserializer for array-backed entity views.
@@ -41,7 +42,7 @@ public final class EntityJacksonViewDeserializer<V extends EntityBase<?>, F exte
         Object read(JsonParser p) throws IOException;
     }
 
-    private static ValueReader readerFor(Class<?> type) {
+    private static ValueReader readerFor(Type type) {
         if (type == String.class) {
             return JsonParser::getText;
         }
@@ -70,11 +71,12 @@ public final class EntityJacksonViewDeserializer<V extends EntityBase<?>, F exte
                 if (reader == null) {
                     ObjectCodec codec = p.getCodec();
                     if (codec instanceof ObjectMapper om) {
-                        reader = om.readerFor(type);
+                        reader = om.readerFor(om.getTypeFactory().constructType(type));
                     } else if (codec instanceof ObjectReader or) {
                         reader = or.forType(type);
                     } else {
-                        reader = new ObjectMapper().readerFor(type);
+                        ObjectMapper om = new ObjectMapper();
+                        reader = om.readerFor(om.getTypeFactory().constructType(type));
                     }
                     cachedReader = reader;
                 }

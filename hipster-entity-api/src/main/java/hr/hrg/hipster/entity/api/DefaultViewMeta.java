@@ -1,5 +1,6 @@
 package hr.hrg.hipster.entity.api;
 
+import java.lang.reflect.Type;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -24,11 +25,11 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
 
     public DefaultViewMeta(
             Class<V> viewType,
-            Class<F> fieldType,
+            Class<F> fieldDefType,
             FieldNameMapper<F> forName,
             Function<Object[], V> creator
     ) {
-        this(viewType, fieldType, forName, creator, null, "", new Class<?>[0]);
+        this(viewType, fieldDefType, forName, creator, null, "", new Class<?>[0]);
     }
 
     public DefaultViewMeta(
@@ -77,7 +78,7 @@ public final class DefaultViewMeta<V, F extends Enum<F> & FieldDef> implements V
     }
 
     @Override
-    public Class<?> fieldTypeAt(int ordinal) {
+    public Type fieldTypeAt(int ordinal) {
         return fieldValues[ordinal].javaType();
     }
 

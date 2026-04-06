@@ -8,7 +8,6 @@ import hr.hrg.hipster.entity.api.ViewMeta;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.Objects;
 import java.util.function.Function;
 
 public final class ArrayBackedViewProxyFactory {
@@ -19,7 +18,7 @@ public final class ArrayBackedViewProxyFactory {
     public static <ID, T extends EntityBase<ID>, V, F extends Enum<F> & FieldDef>
     V createRead(
             ViewMeta<V, F> meta,
-            EntityReadArray<ID, T, F> readArray
+            EntityReadArray<T, F> readArray
     ) {
         return createRead(meta.viewType(), readArray, meta::forName);
     }
@@ -27,7 +26,7 @@ public final class ArrayBackedViewProxyFactory {
     public static <ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef, V>
     V createRead(
             Class<V> viewType,
-            EntityReadArray<ID, T, F> readArray,
+            EntityReadArray<T, F> readArray,
             hr.hrg.hipster.entity.api.FieldNameMapper<F> fieldByMethodName
     ) {
         InvocationHandler handler = new ReadHandler<>(readArray, fieldByMethodName::forName, viewType.getSimpleName() + "Proxy");
@@ -61,12 +60,12 @@ public final class ArrayBackedViewProxyFactory {
         };
     }
 
-    private static final class ReadHandler<ID, T extends EntityBase<ID>, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef> implements InvocationHandler {
-        private final EntityReadArray<ID, T, F> readArray;
+    private static final class ReadHandler<T, F extends Enum<F> & hr.hrg.hipster.entity.api.FieldDef> implements InvocationHandler {
+        private final EntityReadArray<T, F> readArray;
         private final Function<String, F> fieldByMethodName;
         private final String label;
 
-        private ReadHandler(EntityReadArray<ID, T, F> readArray, Function<String, F> fieldByMethodName, String label) {
+        private ReadHandler(EntityReadArray<T, F> readArray, Function<String, F> fieldByMethodName, String label) {
             this.readArray = readArray;
             this.fieldByMethodName = fieldByMethodName;
             this.label = label;

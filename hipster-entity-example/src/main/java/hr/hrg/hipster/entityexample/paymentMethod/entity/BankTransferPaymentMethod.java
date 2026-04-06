@@ -1,9 +1,8 @@
 package hr.hrg.hipster.entityexample.paymentMethod.entity;
 
-import hr.hrg.hipster.entity.api.BooleanOption;
 import hr.hrg.hipster.entity.api.View;
 
-@View(read = BooleanOption.TRUE, write = BooleanOption.FALSE)
+@View()
 public non-sealed interface BankTransferPaymentMethod extends PaymentMethod {
     default String type() {return "BANK_TRANSFER";}
     String accountNumber();
