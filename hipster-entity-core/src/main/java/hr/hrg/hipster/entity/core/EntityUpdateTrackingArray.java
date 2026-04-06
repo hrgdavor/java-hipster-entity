@@ -29,10 +29,10 @@ public abstract class EntityUpdateTrackingArray<T, F extends Enum<F> & FieldDef>
 
     /** Factory: picks {@link EntityUpdateTrackingArray64} or {@link EntityUpdateTrackingArrayLarge}. */
     public static <T, F extends Enum<F> & FieldDef>
-    EntityUpdateTrackingArray<T, F> create(ViewMeta<T,F> meta, Object... values) {
-        return meta.fieldCount() <= 64
-                ? new EntityUpdateTrackingArray64<>(meta, values)
-                : new EntityUpdateTrackingArrayLarge<>(meta, values);
+    EntityUpdateTrackingArray<T, F> create(ForNameOrdinal forNameOrdinal, int fieldCount, Object... values) {
+        return fieldCount <= 64
+                ? new EntityUpdateTrackingArray64<>(forNameOrdinal, fieldCount, values)
+                : new EntityUpdateTrackingArrayLarge<>(forNameOrdinal, fieldCount, values);
     }
 
     /** Mark field ordinal as changed. Returns {@code true} if the bit was newly set. */
