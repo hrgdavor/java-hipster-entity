@@ -91,7 +91,7 @@ The `allFields` section picks a primary type. A schema generator or ORM mapper c
 **Mitigation:** Always check `typeByView` when types diverge. The `hasTypeDivergence()` method on `EntityFieldMeta` can be queried programmatically.
 
 ### 3. Generic mapper/reader confusion
-`EntityReader.get(field)` returns `Object`. If codegen assumes a single type per field name (e.g. generating typed getters), views with divergent types will produce wrong casts at runtime.
+`ViewReader.get(field)` returns `Object`. If codegen assumes a single type per field name (e.g. generating typed getters), views with divergent types will produce wrong casts at runtime.
 
 ### 4. Testing complexity
 Each view needs its own integration test for type compatibility. Shared test helpers that assume a uniform type per field name break.
@@ -233,3 +233,4 @@ This is already implemented via `typeByView` in the JSON output and `hasTypeDive
 | Read vs write form asymmetry       | Yes         | Recommended              | V-2                      |
 | Legacy migration coexistence       | Yes         | Yes                      | V-2                      |
 | Same precision, different wrapper  | **No**      | N/A                      | V-3 + code review        |
+

@@ -1070,8 +1070,8 @@ These are the same P-1 view-to-view mappers, but the generator knows the directi
 // Generated: PersonRow → PersonChangedEvent mapper
 public final class PersonRowToChangedEventMapper {
     public void map(
-            EntityReader<Long, PersonEntity, PersonRowProperty> source,
-            EntityUpdate<Long, PersonEntity, PersonChangedEventProperty> target) {
+            ViewReader<Long, PersonEntity, PersonRowProperty> source,
+            ViewWriter<Long, PersonEntity, PersonChangedEventProperty> target) {
         target.set(PersonChangedEventProperty.firstName, source.get(PersonRowProperty.firstName));
         target.set(PersonChangedEventProperty.lastName, source.get(PersonRowProperty.lastName));
         target.set(PersonChangedEventProperty.updatedAt, source.get(PersonRowProperty.updatedAt));
@@ -1166,7 +1166,7 @@ graph TD
 
     subgraph read ["Read path"]
         CHECK{"Redis hit?"}
-        CHECK -->|yes| CACHED["PersonCached<br/>(Redis hash → EntityReader)"]
+        CHECK -->|yes| CACHED["PersonCached<br/>(Redis hash → ViewReader)"]
         CACHED -->|view-to-view mapper| API1["PersonApiResponse"]
         API1 -->|JSON codec| RESP1["REST response"]
 
@@ -1176,7 +1176,7 @@ graph TD
     end
 
     subgraph consumer ["Event consumer (another service)"]
-        NATS_SUB["NATS subscription"] --> EVT["PersonChangedEvent<br/>(NATS codec → EntityReader)"]
+        NATS_SUB["NATS subscription"] --> EVT["PersonChangedEvent<br/>(NATS codec → ViewReader)"]
         EVT -->|BSON document| MONGO[("MongoDB<br/>(event store / audit log)")]
         EVT -->|PersonAuditEntry mapper| LOG["Structured log"]
     end
@@ -1232,3 +1232,4 @@ public @interface StoreBinding {
 ```
 
 The enum approach is better when the generator needs to switch on store kind to select an adapter generator. The string approach is better when stores are fully plugin-driven. A hybrid (enum with a `CUSTOM` + qualifier fallback) covers both.
+

@@ -34,7 +34,7 @@ public enum PersonSummaryField implements FieldDef {
 ## 3. Builder/update naming
 
 - Builder interface: `<View>Builder` (e.g. `PersonSummaryBuilder`).
-- Updater interface: use `Update` not `Mutable` — e.g. `PersonUpdateView`, `EntityUpdate<ID, E, F>`.
+- Updater interface: use `Update` not `Mutable` — e.g. `PersonUpdateView`, `ViewWriter<ID, E, F>`.
   - `update` is the preferred verb in Java libraries (Spring Data, JOOQ, QueryDSL) and avoids the ambiguity of "mutable".
   - use `update` for state-change intent; use builder for construction/immutable paths that imeplent te `Update` interface.
 - Internal array classes:
@@ -74,5 +74,6 @@ public enum PersonSummaryField implements FieldDef {
 
 - `*Update` names are for mutable/update semantics contract interface.
 - `*Builder` names are for construction/fluent APIs that implement mutable/update semantics.
-- `EntityReadArray` and `EntityReader` are read-only accessor paths.
+- `EntityReadArray` and `ViewReader` are read-only accessor paths.
 - `*Update` and `*Builder` include/assume the read part
+

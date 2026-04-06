@@ -4,7 +4,7 @@ This document captures the exploration and tradeoffs behind DEC-017.
 
 ## Problem framing
 
-`id()` was originally on `EntityReader`. When embedded sub-documents were considered as first-class
+`id()` was originally on `ViewReader`. When embedded sub-documents were considered as first-class
 readers, this became wrong: a `get(F field)` contract should be independent of whether the data has
 a primary key.
 
@@ -34,8 +34,8 @@ something like `street`. The contract must be on the view interface, not the sto
 ## Why the proxy no longer special-cases "id"
 
 Before this decision, `ArrayBackedViewProxyFactory.ReadHandler` had an explicit `if (name.equals("id"))` branch.
-This was needed because `EntityReader` declared `id()` and the proxy had to handle it outside the
-field mapper. After removing `id()` from `EntityReader`, there is no longer a special `EntityReader`
+This was needed because `ViewReader` declared `id()` and the proxy had to handle it outside the
+field mapper. After removing `id()` from `ViewReader`, there is no longer a special `ViewReader`
 method to intercept — `id` becomes a plain accessor like `firstName`, resolved by `FieldNameMapper`
 hitting the compiled switch in the field enum. The special case is gone; the enum entry `id` does the
 work.
@@ -51,3 +51,4 @@ Pros:
 Cons:
 - Every root entity now extends two things; minor boilerplate in root marker interface.
 - Embedded views must actively avoid extending `Identifiable`; this is convention, not enforcement.
+
