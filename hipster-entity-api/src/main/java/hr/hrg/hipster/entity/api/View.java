@@ -11,7 +11,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface View {
-    WriteOption write() default WriteOption.DEFAULT;
+    GenOption gen() default GenOption.DEFAULT;
     String discriminatorField() default "";
     Class<?>[] addons() default {};
+
+    public record Record(GenOption gen, String discriminatorField, Class<?>[] addons){}
 }

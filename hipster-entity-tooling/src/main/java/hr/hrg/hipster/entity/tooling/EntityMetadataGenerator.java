@@ -14,6 +14,11 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
+import hr.hrg.hipster.entity.tooling.meta.EntityFieldMeta;
+import hr.hrg.hipster.entity.tooling.meta.EntityMeta;
+import hr.hrg.hipster.entity.tooling.meta.Property;
+import hr.hrg.hipster.entity.tooling.meta.ViewMeta;
+
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -489,10 +494,21 @@ public class EntityMetadataGenerator {
         Boolean write = null;
 
         AnnotationExpr view = viewOpt.get();
-        for (MemberValuePair pair : view.asNormalAnnotationExpr().getPairs()) {
-            switch (pair.getName().asString()) {
-                case "read" -> read = parseBooleanOption(pair.getValue().toString());
-                case "write" -> write = parseBooleanOption(pair.getValue().toString());
+        if(view.isSingleMemberAnnotationExpr()) {
+            // @View(true) or @View(false) - treat as read=true/false with write=null
+            read = parseBooleanOption(view.asSingleMemberAnnotationExpr().getMemberValue().toString());
+            return new ViewAttributes(read, null);
+        }
+        if(view.isMarkerAnnotationExpr()) {
+            // @View without parameters - treat as read=true, write=true
+            return new ViewAttributes(Boolean.TRUE, Boolean.TRUE);
+        }
+        if(view.isNormalAnnotationExpr()) {
+            for (MemberValuePair pair : view.asNormalAnnotationExpr().getPairs()) {
+                switch (pair.getName().asString()) {
+                    case "read" -> read = parseBooleanOption(pair.getValue().toString());
+                    case "write" -> write = parseBooleanOption(pair.getValue().toString());
+                }
             }
         }
 

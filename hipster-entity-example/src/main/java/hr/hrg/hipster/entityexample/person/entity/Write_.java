@@ -3,7 +3,7 @@ package hr.hrg.hipster.entityexample.person.entity;
 import java.lang.reflect.Type;
 import hr.hrg.hipster.entity.api.TypeUtils;
 
-public enum PersonDto_ {
+public enum Write_ {
 
     id(java.lang.Long.class),
     firstName(java.lang.String.class),
@@ -16,7 +16,7 @@ public enum PersonDto_ {
 
     private final Type propertyType;
 
-    private PersonDto_(Type propertyType) {
+    private Write_(Type propertyType) {
         this.propertyType = propertyType;
     }
 
@@ -28,7 +28,7 @@ public enum PersonDto_ {
         return propertyType;
     }
 
-    public static PersonDto_ forName(String name) {
+    public static Write_ forName(String name) {
         if (name == null)
             return null;
         return switch (name) {

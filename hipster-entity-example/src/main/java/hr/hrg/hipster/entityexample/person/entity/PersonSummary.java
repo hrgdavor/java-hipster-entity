@@ -5,12 +5,12 @@ import hr.hrg.hipster.entity.api.FieldKind;
 import hr.hrg.hipster.entity.api.FieldSource;
 import hr.hrg.hipster.entity.api.View;
 import hr.hrg.hipster.entity.api.ViewWriter;
-import hr.hrg.hipster.entity.api.WriteOption;
+import hr.hrg.hipster.entity.api.GenOption;
 
 import java.util.List;
 import java.util.Map;
 
-@View(write = WriteOption.BUILDER_BOTH)
+@View(gen = GenOption.BUILDER_BOTH)
 public interface PersonSummary extends Person {
 
     @FieldSource(kind = FieldKind.DERIVED, expression = "YEAR(NOW()) - YEAR(birthDate)")

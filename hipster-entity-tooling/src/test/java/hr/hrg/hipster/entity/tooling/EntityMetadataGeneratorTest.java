@@ -1,9 +1,10 @@
 package hr.hrg.hipster.entity.tooling;
 
-import hr.hrg.hipster.entity.tooling.EntityFieldMeta;
-import hr.hrg.hipster.entity.tooling.EntityMeta;
-import hr.hrg.hipster.entity.tooling.Property;
-import hr.hrg.hipster.entity.tooling.ViewMeta;
+import hr.hrg.hipster.entity.tooling.meta.EntityFieldMeta;
+import hr.hrg.hipster.entity.tooling.meta.EntityMeta;
+import hr.hrg.hipster.entity.tooling.meta.Property;
+import hr.hrg.hipster.entity.tooling.meta.ViewMeta;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

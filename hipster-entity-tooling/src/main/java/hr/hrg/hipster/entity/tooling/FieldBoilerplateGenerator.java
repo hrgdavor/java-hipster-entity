@@ -35,6 +35,9 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.type.WildcardType;
 import com.github.javaparser.printer.configuration.PrettyPrinterConfiguration;
+
+import hr.hrg.hipster.entity.tooling.meta.Property;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

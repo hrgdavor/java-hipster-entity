@@ -1,5 +1,82 @@
 # Materialization levels for hipster-entity views
 
+
+## MINIMAL
+
+As soon as `@View` annotation is added enum is created with fields and ViewMeta instance. For your `Person` interface/record a `Person_` boilerplate enum is created.
+
+hipster-entity usage can start (MINIMAL) from two sources paths that converge into one at the next level(RECORD).
+- start with record - in-place upgrade to interface + record (RECORD)
+- start with interface - in-place upgrade to interface + record (RECORD)
+
+<!-- INCLUDE:../hipster-entity-example/src/main/java/hr/hrg/hipster/entityexample/person/iface/Person.java#DOCS -->
+```java
+// start point V1 (interface) 
+interface Person{
+    String name();
+    String email();
+```
+
+Start point V2 (record) 
+
+<!-- INCLUDE:../hipster-entity-example/src/main/java/hr/hrg/hipster/entityexample/person/record/Person.java#DOCS -->
+```java
+record Person(
+    String name, 
+    String email){}
+}
+```
+
+same meta class is added in both cases
+
+<!-- INCLUDE:src/example/init/iface/Person_.java#DOCS -->
+```java
+enum Person_ implements FieldDef{
+    name(String.class),
+    email(String.class),
+    ;
+    
+    private final Type propertyType;
+    private PersonSummary_(Type propertyType) {
+        this.propertyType = propertyType;
+    }
+    @Override
+    public Type javaType() {
+        return propertyType;
+    }
+
+}
+```
+
+This generated metadata enum intentionally breaks standard naming conventions to ensure each member’s name and case exactly match the entity's field names.
+
+
+## RECORD
+
+Regardless if starting with `record` or `interface + record` the setup is the same in this step. Interface defines the contract, record gives performant immutable materialization for using the data. 
+
+```java
+interface Person{
+    String name();
+    String email();
+
+    record Record(
+        String name, 
+        String email){}
+}
+
+```
+
+Bolerplate gen levels that define what boilerplate is added (and can be reliably recreated if needed)
+
+- MINIMAL - required enum `Person_` is generated as soon as you opt-in to using hipster-entity by addng `@View` annotation
+- RECORD - record + interface
+- WRITE_INTERFACE - generates write interface inside View interface (enough to support write with proxy)
+- BUILDER - generates `PersonBuilder`
+- BUILDER_TRACKING - generate `PersonBuilderTracking`
+- BUILDER_BOTH - generates `PersonBuilder`, `PersonBuilderTracking`
+
+
 Deserializing/reading (return value true/false if field exists, or enum: NO_CHNAGE, CHANGE, NOT_FOUND)
 
 - JSON  - set(String, Object)
@@ -10,6 +87,13 @@ Deserializing/reading (return value true/false if field exists, or enum: NO_CHNA
 
 User facing API may not need set(F extends Enum<F>, Object) as it is better to generate methods (implement Entity interface)
 
+
+In case of git conflicts, just merge using yours/their and rebuild boilerplate, not worying about resolving.
+
+Read is added automatically
+- record - the record is used itself that can be later moved in-place to inner type of Interface with same signature
+- interface - without record for DTOs and Forms
+- interface + record
 
 sketch
 
@@ -41,15 +125,11 @@ At D0 starts with Entity_ field enum and ViewMeta
 Entity view (Uses Identifiable)
 
 - E1 - read
-- E2 - read/write `@View` with `write != NONE`
+- E2 - read/write `@View` with `write != MINIMAL`
 
 
 
-matrix 
-
-default/minimal reading is `PROXY`
-default writing is `NONE`
-
+matrix
 - **read metadata boilerplate** - starting minimum when `@View`
 - interface 
 - record + `@View` OR inerface + record + `@View(read=RECORD)` 

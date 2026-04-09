@@ -1,4 +1,4 @@
-package hr.hrg.hipster.entity.tooling;
+package hr.hrg.hipster.entity.tooling.meta;
 
 import java.util.Objects;
 
