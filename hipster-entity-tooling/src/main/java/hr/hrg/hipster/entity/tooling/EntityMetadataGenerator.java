@@ -697,9 +697,10 @@ public class EntityMetadataGenerator {
         }
 
         for (Property prop : current.properties()) {
-            if (!merged.containsKey(prop.name())) {
-                merged.put(prop.name(), prop);
+            if (merged.containsKey(prop.name())) {
+                merged.remove(prop.name());
             }
+            merged.put(prop.name(), prop);
         }
     }
 

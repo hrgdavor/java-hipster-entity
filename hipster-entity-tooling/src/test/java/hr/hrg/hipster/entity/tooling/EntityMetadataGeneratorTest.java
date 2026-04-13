@@ -142,6 +142,58 @@ public class EntityMetadataGeneratorTest {
     }
 
     @Test
+    public void childViewPropertyOverrideUsesChildType() throws Exception {
+        Path sourceRoot = Files.createTempDirectory("entity-metadata-override-source");
+        Path outputRoot = Files.createTempDirectory("entity-metadata-override-output");
+
+        Path personEntityFile = sourceRoot.resolve("PersonEntity.java");
+        Path baseViewFile = sourceRoot.resolve("BaseView.java");
+        Path childViewFile = sourceRoot.resolve("ChildView.java");
+
+        String entitySource = "package hr.hrg.hipster.entity.person;\n" +
+                "import hr.hrg.hipster.entity.api.EntityBase;\n" +
+                "public interface PersonEntity extends EntityBase<Long> {}\n";
+        String baseViewSource = "package hr.hrg.hipster.entity.person;\n" +
+                "import hr.hrg.hipster.entity.api.View;\n" +
+                "import hr.hrg.hipster.entity.api.BooleanOption;\n" +
+                "@View(read = BooleanOption.TRUE, write = BooleanOption.FALSE)\n" +
+                "public interface BaseView extends PersonEntity {\n" +
+                "  String status();\n" +
+                "}\n";
+        String childViewSource = "package hr.hrg.hipster.entity.person;\n" +
+                "import hr.hrg.hipster.entity.api.View;\n" +
+                "import hr.hrg.hipster.entity.api.BooleanOption;\n" +
+                "@View(read = BooleanOption.TRUE, write = BooleanOption.FALSE)\n" +
+                "public interface ChildView extends BaseView {\n" +
+                "  Integer status();\n" +
+                "}\n";
+
+        Files.writeString(personEntityFile, entitySource);
+        Files.writeString(baseViewFile, baseViewSource);
+        Files.writeString(childViewFile, childViewSource);
+
+        EntityMetadataGenerator.generate(sourceRoot, outputRoot);
+
+        Path metadataFile = outputRoot.resolve("Person.metadata.json");
+        Assertions.assertTrue(Files.exists(metadataFile), "Metadata file should be generated");
+
+        String json = Files.readString(metadataFile);
+        EntityMeta entityMeta = EntityMetadataGenerator.fromJson(json);
+
+        ViewMeta childView = entityMeta.views().stream()
+                .filter(v -> "ChildView".equals(v.name()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("ChildView should exist"));
+
+        Property statusProp = childView.properties().stream()
+                .filter(p -> "status".equals(p.name()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("status property should exist"));
+
+        Assertions.assertEquals("java.lang.Integer", statusProp.type());
+    }
+
+    @Test
     public void generatePaymentMethodMetadataFromExampleSources() throws Exception {
         Path outputRoot = Files.createTempDirectory("paymentmethod-output");
 
