@@ -3,6 +3,8 @@
 The architecture is metadata-first: interface contracts and generated metadata are the primary outputs.
 Runtime pieces built on top of that metadata, such as proxies, builders, factories, or adapters, are optional building blocks that projects may adopt selectively.
 
+For new users, see [User documentation](../user/README.md) for onboarding and examples.
+
 Related decisions and implementation guides:
 
 - [Architecture decisions index](DECISIONS.md) — all architecture decisions (Accepted, Proposed, Trial, etc.)

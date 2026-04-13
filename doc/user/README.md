@@ -10,13 +10,19 @@ Use this folder for guides that help users adopt and use the library, including:
 - common patterns and examples
 - troubleshooting and FAQ
 
-## Suggested initial docs
+## Start here
 
-1. Getting Started
-2. Core Concepts for Users
-3. Basic CRUD/flow examples
-4. Troubleshooting
+- [Why hipster-entity](why-hipster-entity.md)
+- [Getting Started](getting-started.md)
+- [Core Concepts](core-concepts.md)
+- [Materialization Guide](materialization-guide.md)
+- [Patterns and examples](patterns/README.md)
+- [FAQ](faq.md)
 
-## Scope note
+## What belongs here
 
-Architecture decisions and internal design rationale belong in other documentation sections (for example architecture and brainstorm docs). User docs should stay task-oriented and practical.
+User docs should be task-oriented and practical. They should explain how to adopt the library and when to use its key features.
+
+## What does not belong here
+
+Architecture decisions and internal implementation details belong in other sections such as `doc/architecture/` and `doc/brainstorm/`.

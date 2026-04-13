@@ -4,18 +4,25 @@
 
 The project favors explicit metadata and predictable contracts over reflection-heavy runtime discovery. Runtime helpers such as proxies, builders, and factories are layered components that can be adopted incrementally.
 
-## Implementation direction
+## Quick start
+
+- [Why hipster-entity](doc/user/why-hipster-entity.md)
+- [Getting Started](doc/user/getting-started.md)
+- [Core Concepts](doc/user/core-concepts.md)
+- [Materialization Guide](doc/user/materialization-guide.md)
+
+## Documentation
+
+- [User documentation](doc/user/README.md)
+- [Project docs index](doc/README.md)
+- [Architecture decisions](doc/architecture/DECISIONS.md)
+- [Roadmap](doc/roadmap/README.md)
+
+## For contributors
 
 - Proxy-backed builders and views are the baseline implementation path.
 - Change tracking is ordinal/bitmask based for compact and predictable behavior.
 - Generated/materialized implementations are targeted optimizations for measured hotspots, not the default.
-
-## Documentation
-
-- [Project docs index](doc/README.md)
-- [Architecture decisions](doc/architecture/DECISIONS.md)
-- [Roadmap](doc/roadmap/README.md)
-- [User documentation](doc/user/README.md)
 
 ## Tooling runner with Bun
 
