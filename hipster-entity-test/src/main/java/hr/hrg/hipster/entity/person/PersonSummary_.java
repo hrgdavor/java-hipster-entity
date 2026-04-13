@@ -17,7 +17,7 @@ import java.util.Map;
  * {@code enum.name()} is the field name, always. The ordinal is the positional index
  * into the backing array: {@code values[field.ordinal()]} holds the field value.</p>
  */
-public enum PersonSummaryField implements FieldDef {
+public enum PersonSummary_ implements FieldDef {
     id(Long.class),
     firstName(String.class),
     lastName(String.class),
@@ -27,7 +27,7 @@ public enum PersonSummaryField implements FieldDef {
 
     private final Class<?> javaType;
 
-    PersonSummaryField(Class<?> javaType) {
+    PersonSummary_(Class<?> javaType) {
         this.javaType = javaType;
     }
 
@@ -36,7 +36,7 @@ public enum PersonSummaryField implements FieldDef {
         return javaType;
     }
 
-    public static PersonSummaryField forName(String name) {
+    public static PersonSummary_ forName(String name) {
         if (name == null) {
             return null;
         }
@@ -51,15 +51,15 @@ public enum PersonSummaryField implements FieldDef {
         };
     }
 
-    private static final FieldNameMapper<PersonSummaryField> NAME_MAPPER = PersonSummaryField::forName;
+    private static final FieldNameMapper<PersonSummary_> NAME_MAPPER = PersonSummary_::forName;
 
-    public static final ViewMeta<PersonSummary, PersonSummaryField> META = new DefaultViewMeta<>(
+    public static final ViewMeta<PersonSummary, PersonSummary_> META = new DefaultViewMeta<>(
         PersonSummary.class,
-        PersonSummaryField.class,
+        PersonSummary_.class,
         NAME_MAPPER,
         values -> {
-            EntityReadArray<Long, PersonSummary, PersonSummaryField> readArray =
-                    new EntityReadArray<>(PersonSummaryField.class, values);
+            EntityReadArray<PersonSummary, PersonSummary_> readArray =
+                    new EntityReadArray<>(PersonSummary_.class, values);
             return ArrayBackedViewProxyFactory.createRead(
                     PersonSummary.class,
                     readArray,

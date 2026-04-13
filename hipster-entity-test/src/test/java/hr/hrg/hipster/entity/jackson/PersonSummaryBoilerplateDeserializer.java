@@ -6,7 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import hr.hrg.hipster.entity.person.PersonSummary;
-import hr.hrg.hipster.entity.person.PersonSummaryField;
+import hr.hrg.hipster.entity.person.PersonSummary_;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,7 +49,7 @@ public final class PersonSummaryBoilerplateDeserializer {
             }
         }
 
-        return PersonSummaryField.META.create(new Object[]{id, firstName, lastName, age, departmentName, metadata});
+        return PersonSummary_.META.create(new Object[]{id, firstName, lastName, age, departmentName, metadata});
     }
 }
 
@@ -63,7 +63,7 @@ final class PersonSummaryBoilerplateDirectArrayDeserializer {
             new ObjectMapper().readerFor(METADATA_TYPE_REF);
 
     public PersonSummary deserialize(JsonParser p) throws IOException {
-        Object[] values = new Object[PersonSummaryField.values().length];
+        Object[] values = new Object[PersonSummary_.values().length];
 
         JsonToken token = p.currentToken();
         if (token == null) {
@@ -86,7 +86,7 @@ final class PersonSummaryBoilerplateDirectArrayDeserializer {
             }
         }
 
-        return PersonSummaryField.META.create(values);
+        return PersonSummary_.META.create(values);
     }
 }
 
@@ -106,7 +106,7 @@ final class PersonSummaryConcreteBoilerplateDeserializer {
             new ObjectMapper().readerFor(METADATA_TYPE_REF);
 
     public PersonSummary deserialize(JsonParser p) throws IOException {
-        Object[] values = new Object[PersonSummaryField.values().length];
+        Object[] values = new Object[PersonSummary_.values().length];
 
         JsonToken token = p.currentToken();
         if (token == null) {
@@ -139,7 +139,7 @@ final class PersonSummaryConcreteBoilerplateDeserializer {
  *
  * <p>This is the performance ceiling for array-backed view deserialization when field order is
  * guaranteed (e.g. JSON produced by {@link hr.hrg.hipster.entity.jackson.EntityJacksonViewSerializer},
- * which always iterates fields in {@link PersonSummaryField} ordinal order).
+ * which always iterates fields in {@link PersonSummary_} ordinal order).
  *
  * <p>Eliminates ALL field-name dispatch overhead: no switch, no hashCode, no equals, no
  * linear scan. The parser simply advances through tokens positionally — identical to

@@ -1,8 +1,8 @@
 package hr.hrg.hipster.entity.jackson;
 
-import hr.hrg.hipster.entity.api.EntityReader;
+import hr.hrg.hipster.entity.api.ViewReader;
 import hr.hrg.hipster.entity.person.PersonSummary;
-import hr.hrg.hipster.entity.person.PersonSummaryField;
+import hr.hrg.hipster.entity.person.PersonSummary_;
 
 import java.util.List;
 import java.util.Map;
@@ -17,12 +17,12 @@ import java.util.Map;
  *
  * <p>Used in JMH benchmarks to measure deserialization throughput with and without
  * the proxy overhead, establishing the theoretical ceiling for array-backed views.
- * Compare against {@link PersonSummaryField#META} (proxy-backed) to quantify the
+ * Compare against {@link PersonSummary_#META} (proxy-backed) to quantify the
  * proxy call overhead.</p>
  */
 @SuppressWarnings("unchecked")
 final class PersonSummaryConcreteImpl
-        implements PersonSummary, EntityReader<Long, PersonSummary, PersonSummaryField> {
+        implements PersonSummary, ViewReader {
 
     private final Object[] values;
 
@@ -30,17 +30,16 @@ final class PersonSummaryConcreteImpl
         this.values = values;
     }
 
-    @Override public Long id()               { return (Long)    values[PersonSummaryField.id.ordinal()]; }
-    @Override public String firstName()      { return (String)  values[PersonSummaryField.firstName.ordinal()]; }
-    @Override public String lastName()       { return (String)  values[PersonSummaryField.lastName.ordinal()]; }
-    @Override public Integer age()           { return (Integer) values[PersonSummaryField.age.ordinal()]; }
-    @Override public String departmentName() { return (String)  values[PersonSummaryField.departmentName.ordinal()]; }
+    @Override public Long id()               { return (Long)    values[PersonSummary_.id.ordinal()]; }
+    @Override public String firstName()      { return (String)  values[PersonSummary_.firstName.ordinal()]; }
+    @Override public String lastName()       { return (String)  values[PersonSummary_.lastName.ordinal()]; }
+    @Override public Integer age()           { return (Integer) values[PersonSummary_.age.ordinal()]; }
+    @Override public String departmentName() { return (String)  values[PersonSummary_.departmentName.ordinal()]; }
 
     @Override
     public Map<String, List<Long>> metadata() {
-        return (Map<String, List<Long>>) values[PersonSummaryField.metadata.ordinal()];
+        return (Map<String, List<Long>>) values[PersonSummary_.metadata.ordinal()];
     }
 
-    @Override public Object get(PersonSummaryField field) { return values[field.ordinal()]; }
     @Override public Object get(int fieldOrdinal)         { return values[fieldOrdinal]; }
 }

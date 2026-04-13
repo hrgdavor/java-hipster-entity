@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hr.hrg.hipster.entity.api.DefaultViewMeta;
 import hr.hrg.hipster.entity.api.ViewMeta;
 import hr.hrg.hipster.entity.person.PersonSummary;
-import hr.hrg.hipster.entity.person.PersonSummaryField;
+import hr.hrg.hipster.entity.person.PersonSummary_;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,8 +46,8 @@ public class PersonSummaryFileBenchmark {
 
     private byte[] jsonBytes;
     private ObjectMapper mapper;
-    private EntityJacksonViewDeserializer<PersonSummary, PersonSummaryField> viewDeserializer;
-    private EntityJacksonViewDeserializer<PersonSummary, PersonSummaryField> concreteViewDeserializer;
+    private EntityJacksonViewDeserializer<PersonSummary, PersonSummary_> viewDeserializer;
+    private EntityJacksonViewDeserializer<PersonSummary, PersonSummary_> concreteViewDeserializer;
     private PersonSummaryBoilerplateDeserializer boilerplateDeserializer;
     private PersonSummaryBoilerplateDirectArrayDeserializer boilerplateDirectDeserializer;
     private PersonSummaryConcreteBoilerplateDeserializer concreteBoilerplateDeserializer;
@@ -67,14 +67,14 @@ public class PersonSummaryFileBenchmark {
             jsonBytes = is.readAllBytes();
         }
 
-        ViewMeta<PersonSummary, PersonSummaryField> concreteMeta = new DefaultViewMeta<>(
+        ViewMeta<PersonSummary, PersonSummary_> concreteMeta = new DefaultViewMeta<>(
                 PersonSummary.class,
-                PersonSummaryField.class,
-                PersonSummaryField::forName,
+                PersonSummary_.class,
+                PersonSummary_::forName,
                 PersonSummaryConcreteImpl::new
         );
 
-        viewDeserializer             = new EntityJacksonViewDeserializer<>(PersonSummaryField.META);
+        viewDeserializer             = new EntityJacksonViewDeserializer<>(PersonSummary_.META);
         concreteViewDeserializer     = new EntityJacksonViewDeserializer<>(concreteMeta);
         boilerplateDeserializer      = new PersonSummaryBoilerplateDeserializer();
         boilerplateDirectDeserializer = new PersonSummaryBoilerplateDirectArrayDeserializer();
@@ -158,7 +158,7 @@ public class PersonSummaryFileBenchmark {
         return elapsedNs / 1_000_000.0;
     }
 
-    private double scanWith(EntityJacksonViewDeserializer<PersonSummary, PersonSummaryField> d) throws IOException {
+    private double scanWith(EntityJacksonViewDeserializer<PersonSummary, PersonSummary_> d) throws IOException {
         return scanWith((ViewDeserializer) d::deserialize);
     }
 

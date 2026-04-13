@@ -5,10 +5,10 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hr.hrg.hipster.entity.api.DefaultViewMeta;
-import hr.hrg.hipster.entity.api.EntityReader;
 import hr.hrg.hipster.entity.api.ViewMeta;
+import hr.hrg.hipster.entity.api.ViewReader;
 import hr.hrg.hipster.entity.person.PersonSummary;
-import hr.hrg.hipster.entity.person.PersonSummaryField;
+import hr.hrg.hipster.entity.person.PersonSummary_;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Mode;
@@ -30,18 +30,18 @@ public class EntityJacksonJmhBenchmark {
         ObjectMapper defaultMapper;
         ObjectMapper moduleMapper;
         PersonSummary view;
-        EntityReader<?, PersonSummary, PersonSummaryField> viewReader;
+        ViewReader viewReader;
         PersonDto baselineBean;
         String jsonFromView;
         byte[] jsonFromViewBytes;
         String jsonFromBean;
         byte[] jsonFromBeanBytes;
-        EntityJacksonViewSerializer<PersonSummary, PersonSummaryField> entityViewSerializer;
+        EntityJacksonViewSerializer<PersonSummary, PersonSummary_> entityViewSerializer;
         PersonSummaryGeneratedSerializer personSummarySerializer;
 
         // Pre-built deserializers — shared across all benchmark calls (no per-call allocation)
-        EntityJacksonViewDeserializer<PersonSummary, PersonSummaryField> viewDeserializer;
-        EntityJacksonViewDeserializer<PersonSummary, PersonSummaryField> concreteViewDeserializer;
+        EntityJacksonViewDeserializer<PersonSummary, PersonSummary_> viewDeserializer;
+        EntityJacksonViewDeserializer<PersonSummary, PersonSummary_> concreteViewDeserializer;
         PersonSummaryBoilerplateDeserializer boilerplateDeserializer;
         PersonSummaryBoilerplateDirectArrayDeserializer boilerplateDirectDeserializer;
         PersonSummaryConcreteBoilerplateDeserializer concreteBoilerplateDeserializer;
@@ -54,40 +54,40 @@ public class EntityJacksonJmhBenchmark {
         public void setup() throws IOException {
             defaultMapper = new ObjectMapper();
             moduleMapper = new ObjectMapper();
-            EntityJacksonMapper.registerModule(moduleMapper, PersonSummaryField.META);
+            EntityJacksonMapper.registerModule(moduleMapper, PersonSummary_.META);
 
-            Object[] values = new Object[PersonSummaryField.values().length];
-            values[PersonSummaryField.id.ordinal()] = 42L;
-            values[PersonSummaryField.firstName.ordinal()] = "Alice";
-            values[PersonSummaryField.lastName.ordinal()] = "Smith";
-            values[PersonSummaryField.age.ordinal()] = 34;
-            values[PersonSummaryField.departmentName.ordinal()] = "Engineering";
-            values[PersonSummaryField.metadata.ordinal()] = null;
-            view = PersonSummaryField.META.create(values);
+            Object[] values = new Object[PersonSummary_.values().length];
+            values[PersonSummary_.id.ordinal()] = 42L;
+            values[PersonSummary_.firstName.ordinal()] = "Alice";
+            values[PersonSummary_.lastName.ordinal()] = "Smith";
+            values[PersonSummary_.age.ordinal()] = 34;
+            values[PersonSummary_.departmentName.ordinal()] = "Engineering";
+            values[PersonSummary_.metadata.ordinal()] = null;
+            view = PersonSummary_.META.create(values);
 
             baselineBean = new PersonDto(42L, "Alice", "Smith", 34, "Engineering", null);
 
             StringWriter w = new StringWriter();
-            viewReader = (EntityReader<?, PersonSummary, PersonSummaryField>) (EntityReader) view;
-            EntityJacksonMapper.toJson(PersonSummaryField.META, viewReader, w);
+            viewReader = (ViewReader) view;
+            EntityJacksonMapper.toJson(PersonSummary_.META, viewReader, w);
             jsonFromView = w.toString();
             jsonFromViewBytes = jsonFromView.getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
             jsonFromBean = defaultMapper.writeValueAsString(baselineBean);
             jsonFromBeanBytes = jsonFromBean.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            entityViewSerializer = new EntityJacksonViewSerializer<>(PersonSummaryField.META);
+            entityViewSerializer = new EntityJacksonViewSerializer<>(PersonSummary_.META);
             personSummarySerializer = new PersonSummaryGeneratedSerializer();
 
             // Build ViewMeta backed by concrete impl (no proxy) for concrete-path benchmarks
-            ViewMeta<PersonSummary, PersonSummaryField> concreteMeta = new DefaultViewMeta<>(
+            ViewMeta<PersonSummary, PersonSummary_> concreteMeta = new DefaultViewMeta<>(
                     PersonSummary.class,
-                    PersonSummaryField.class,
-                    PersonSummaryField::forName,
+                    PersonSummary_.class,
+                    PersonSummary_::forName,
                     PersonSummaryConcreteImpl::new
             );
 
             // Pre-build all deserializers once — hot path pays zero construction cost
-            viewDeserializer         = new EntityJacksonViewDeserializer<>(PersonSummaryField.META);
+            viewDeserializer         = new EntityJacksonViewDeserializer<>(PersonSummary_.META);
             concreteViewDeserializer = new EntityJacksonViewDeserializer<>(concreteMeta);
             boilerplateDeserializer      = new PersonSummaryBoilerplateDeserializer();
             boilerplateDirectDeserializer = new PersonSummaryBoilerplateDirectArrayDeserializer();
@@ -95,13 +95,13 @@ public class EntityJacksonJmhBenchmark {
             orderedPositionalDeserializer   = new PersonSummaryOrderedPositionalDeserializer();
 
             // Pre-filled array for object-creation-only benchmarks
-            prefilledValues = new Object[PersonSummaryField.values().length];
-            prefilledValues[PersonSummaryField.id.ordinal()] = 42L;
-            prefilledValues[PersonSummaryField.firstName.ordinal()] = "Alice";
-            prefilledValues[PersonSummaryField.lastName.ordinal()] = "Smith";
-            prefilledValues[PersonSummaryField.age.ordinal()] = 34;
-            prefilledValues[PersonSummaryField.departmentName.ordinal()] = "Engineering";
-            prefilledValues[PersonSummaryField.metadata.ordinal()] = null;
+            prefilledValues = new Object[PersonSummary_.values().length];
+            prefilledValues[PersonSummary_.id.ordinal()] = 42L;
+            prefilledValues[PersonSummary_.firstName.ordinal()] = "Alice";
+            prefilledValues[PersonSummary_.lastName.ordinal()] = "Smith";
+            prefilledValues[PersonSummary_.age.ordinal()] = 34;
+            prefilledValues[PersonSummary_.departmentName.ordinal()] = "Engineering";
+            prefilledValues[PersonSummary_.metadata.ordinal()] = null;
         }
     }
 
@@ -112,7 +112,7 @@ public class EntityJacksonJmhBenchmark {
     @Benchmark
     public String serializeViewThroughEntityJackson(BenchmarkState state) throws IOException {
         StringWriter w = new StringWriter();
-        EntityJacksonMapper.toJson(PersonSummaryField.META, state.viewReader, w);
+        EntityJacksonMapper.toJson(PersonSummary_.META, state.viewReader, w);
         return w.toString();
     }
 
@@ -223,7 +223,7 @@ public class EntityJacksonJmhBenchmark {
      */
     @Benchmark
     public PersonSummary createOnly_proxy(BenchmarkState state) {
-        return PersonSummaryField.META.create(state.prefilledValues);
+        return PersonSummary_.META.create(state.prefilledValues);
     }
 
     /**
@@ -283,31 +283,31 @@ public class EntityJacksonJmhBenchmark {
     // =========================================================================
 
     public static final class PersonSummaryGeneratedSerializer {
-        public void serialize(EntityReader<?, PersonSummary, PersonSummaryField> src, JsonGenerator gen) throws IOException {
+        public void serialize(ViewReader src, JsonGenerator gen) throws IOException {
             gen.writeStartObject();
 
             gen.writeFieldName("id");
-            Object id = src.get(PersonSummaryField.id.ordinal());
+            Object id = src.get(PersonSummary_.id.ordinal());
             if (id == null) gen.writeNull(); else gen.writeNumber((Long) id);
 
             gen.writeFieldName("firstName");
-            Object firstName = src.get(PersonSummaryField.firstName.ordinal());
+            Object firstName = src.get(PersonSummary_.firstName.ordinal());
             if (firstName == null) gen.writeNull(); else gen.writeString((String) firstName);
 
             gen.writeFieldName("lastName");
-            Object lastName = src.get(PersonSummaryField.lastName.ordinal());
+            Object lastName = src.get(PersonSummary_.lastName.ordinal());
             if (lastName == null) gen.writeNull(); else gen.writeString((String) lastName);
 
             gen.writeFieldName("age");
-            Object age = src.get(PersonSummaryField.age.ordinal());
+            Object age = src.get(PersonSummary_.age.ordinal());
             if (age == null) gen.writeNull(); else gen.writeNumber((Integer) age);
 
             gen.writeFieldName("departmentName");
-            Object departmentName = src.get(PersonSummaryField.departmentName.ordinal());
+            Object departmentName = src.get(PersonSummary_.departmentName.ordinal());
             if (departmentName == null) gen.writeNull(); else gen.writeString((String) departmentName);
 
             gen.writeFieldName("metadata");
-            Object metadata = src.get(PersonSummaryField.metadata.ordinal());
+            Object metadata = src.get(PersonSummary_.metadata.ordinal());
             if (metadata == null) gen.writeNull(); else gen.writeObject(metadata);
 
             gen.writeEndObject();
