@@ -10,6 +10,7 @@ Related decisions and implementation guides:
 - [Architecture decisions index](DECISIONS.md) — all architecture decisions (Accepted, Proposed, Trial, etc.)
 - [DEC-014: EnumSet concrete dispatch strategy](decisions/DEC-014.md) — concrete dispatch specialization for change tracking
 - [DEC-015: Generated field metadata method lookup strategy](decisions/DEC-015.md) — generated sorted arrays, binary search dispatch, and optional char-bucket prefilter
+- [Generator freezing architecture](gen-freezing.md) — generator freeze marker semantics for manual preservation of generated code
 - [EnumSet implementation guide](enumset-implementation-and-jmh.md) — how-to reference with JMH profile and measured results
 
 ## 1. Core principle

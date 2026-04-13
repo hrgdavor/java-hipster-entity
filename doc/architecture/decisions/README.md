@@ -45,6 +45,10 @@ This folder contains individual decision records for the hipster-entity project 
 |                       | Notes: Generated sorted arrays + binary search baseline; char-bucket optimization is optional and benchmark-gated |          |            |
 | [DEC-016](DEC-016.md) | **Field-name-to-ordinal dispatch: `forName` + ordinal indexing; per-call HashMap forbidden** | Accepted | 2026-04-03 |
 |                       | Notes: Mandates `ViewMeta.forName` + pre-built `readers[]`; prohibits per-call HashMap in all parse/map paths; see implementation guide in user docs |          |            |
+| [DEC-017](DEC-017.md) | **Identifiable<ID> as opt-in identity mixin**                            | Accepted | 2026-04-03 |
+|                       | Notes: Root entity identity is now explicit; `ViewReader` no longer declares `id()` |          |            |
+| [DEC-018](DEC-018.md) | **Generator freeze marker semantics**                                   | Proposed | 2026-04-13 |
+|                       | Notes: Defines `@GeneratedFrozen`, comment freeze markers, and frozen-file preservation policy |          |            |
 
 ## Template
 

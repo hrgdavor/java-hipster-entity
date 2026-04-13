@@ -133,7 +133,8 @@ Freeze mode goals:
 Suggested controls:
 - freeze at module/package/file granularity
 - metadata file with reason, owner, and expiry review date
-- warning in generation logs when writing is skipped due to freeze
+- optional in-source freeze markers with `until` metadata for expected fix tracking
+- warning in generation logs when writing is skipped due to freeze or when expected fix dates are overdue
 
 ## 8. In-file augmentation guidelines
 

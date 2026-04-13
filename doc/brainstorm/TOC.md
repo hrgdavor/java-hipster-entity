@@ -20,4 +20,5 @@
 - [Open questions index](open-questions-index.md)
 - [Annotation processing vs generated metadata rationale](annotation-processing-vs-generated-metadata.md)
 - [Entity metadata generator notes](entity-metadata-generator.md)
+- [Generator freezing brainstorm](gen-freezing.md)
 - [Typed annotation exposure notes](typed-annotation-exposure.md)

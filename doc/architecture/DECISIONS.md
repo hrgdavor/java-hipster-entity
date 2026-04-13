@@ -25,5 +25,6 @@ Architecture decisions are organized individually in the [decisions](decisions/)
 | [DEC-015](decisions/DEC-015.md) | Field metadata method lookup strategy | Accepted |
 | [DEC-016](decisions/DEC-016.md) | Field-name-to-ordinal: `forName`      | Accepted |
 | [DEC-017](decisions/DEC-017.md) | Identifiable as opt-in identity mixin | Accepted |
+| [DEC-018](decisions/DEC-018.md) | Generator freeze marker semantics     | Proposed |
 
 See individual decision files in [decisions/](decisions/) for complete details.
