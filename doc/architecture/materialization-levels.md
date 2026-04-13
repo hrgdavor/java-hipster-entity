@@ -3,11 +3,15 @@
 
 ## MINIMAL
 
-As soon as `@View` annotation is added enum is created with fields and ViewMeta instance. For your `Person` interface/record a `Person_` boilerplate enum is created.
+As soon as the `@View` annotation is added, an enum is created with fields and a `ViewMeta` instance.
+For a `Person` view, that yields a generated metadata enum such as `Person_`.
 
-hipster-entity usage can start (MINIMAL) from two sources paths that converge into one at the next level(RECORD).
-- start with record - in-place upgrade to interface + record (RECORD)
-- start with interface - in-place upgrade to interface + record (RECORD)
+Level 0 can be jumpstarted from either a plain interface or a record:
+- start with `interface` only → metadata is generated for the interface view
+- start with `record` only → metadata is generated for the record view
+
+Both paths converge at Level 1 (`RECORD`), where the interface becomes the stable contract and the record provides the concrete materialization.
+If you start from a record, this migration can often happen in place because the generated interface method names follow the same naming pattern as the original record components.
 
 <!-- INCLUDE:../hipster-entity-example/src/main/java/hr/hrg/hipster/entityexample/person/iface/Person.java#DOCS -->
 ```java
@@ -67,14 +71,15 @@ interface Person{
 
 ```
 
-Bolerplate gen levels that define what boilerplate is added (and can be reliably recreated if needed)
+Bolerplate gen levels that define what boilerplate is added (and can be reliably recreated if needed).
+Each generation level is cumulative: higher levels also include the capabilities of all lower levels.
 
-- MINIMAL - required enum `Person_` is generated as soon as you opt-in to using hipster-entity by addng `@View` annotation
+- META - required enum `Person_` is generated as soon as you opt-in to using hipster-entity by addng `@View` annotation
 - RECORD - record + interface
-- WRITE_INTERFACE - generates write interface inside View interface (enough to support write with proxy)
+- WRITABLE - generates write interface inside View interface (enough to support write with proxy)
 - BUILDER - generates `PersonBuilder`
-- BUILDER_TRACKING - generate `PersonBuilderTracking`
-- BUILDER_BOTH - generates `PersonBuilder`, `PersonBuilderTracking`
+- BUILDER_TRACKED - generate `PersonBuilderTracking`
+- BUILDER_ALL - generates `PersonBuilder`, `PersonBuilderTracking`
 
 
 Deserializing/reading (return value true/false if field exists, or enum: NO_CHNAGE, CHANGE, NOT_FOUND)

@@ -124,8 +124,8 @@ public final class FieldBoilerplateGenerator {
         }
 
         for (Property prop : properties) {
-            Expression initializer = parseTypeExpression(prop.type);
-            EnumConstantDeclaration constant = new EnumConstantDeclaration(prop.name);
+            Expression initializer = parseTypeExpression(prop.type());
+            EnumConstantDeclaration constant = new EnumConstantDeclaration(prop.name());
             constant.getArguments().add(initializer);
             enumDecl.addEntry(constant);
         }
@@ -243,14 +243,14 @@ public final class FieldBoilerplateGenerator {
             SwitchEntry entry;
             if (fieldEnumMode) {
                 entry = new SwitchEntry(
-                        NodeList.nodeList(new StringLiteralExpr(prop.name)),
+                        NodeList.nodeList(new StringLiteralExpr(prop.name())),
                         SwitchEntry.Type.STATEMENT_GROUP,
-                        NodeList.nodeList(new ReturnStmt(new NameExpr(prop.name))));
+                        NodeList.nodeList(new ReturnStmt(new NameExpr(prop.name()))));
             } else {
                 entry = new SwitchEntry(
-                        NodeList.nodeList(new StringLiteralExpr(prop.name)),
+                        NodeList.nodeList(new StringLiteralExpr(prop.name())),
                         SwitchEntry.Type.EXPRESSION,
-                        NodeList.nodeList(new ExpressionStmt(new NameExpr(prop.name))));
+                        NodeList.nodeList(new ExpressionStmt(new NameExpr(prop.name()))));
             }
             switchExpr.getEntries().add(entry);
         }

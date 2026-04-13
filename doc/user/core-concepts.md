@@ -61,11 +61,14 @@ For users, this means you can express whether a field is stored, computed, or so
 
 ## Materialization levels
 
-`hipster-entity` supports an adoption ladder:
+`hipster-entity` supports an ordered adoption ladder.
+Each level is cumulative — higher levels include the capabilities of all earlier levels and then add more materialization or write support.
 
-- **Minimal** — interface + generated metadata
-- **Record** — interface + immutable record implementation
-- **Write interface** — add update-capable shapes
-- **Builder** — fluent construction and change tracking
+- **Meta** — interface + generated metadata (`ViewMeta` and field enum)
+- **Record** — includes Meta and adds an immutable record implementation for the view
+- **Writable** — includes Record and Meta, and adds a write-capable interface for proxy-backed updates
+- **Builder** — includes Writable, Record, and Meta, and adds a generated concrete builder class
+- **BuilderTracked** — includes Builder and all earlier levels, plus a builder that tracks which fields were modified
+- **BuilderAll** — includes BuilderTracked and Builder, generating both a regular builder and a tracking builder
 
 For a deeper explanation, see [Materialization Guide](materialization-guide.md).

@@ -3,7 +3,6 @@ package hr.hrg.hipster.entity.tooling;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.JavaParser;
-import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -16,7 +15,10 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import hr.hrg.hipster.entity.tooling.meta.EntityFieldMeta;
 import hr.hrg.hipster.entity.tooling.meta.EntityMeta;
+import hr.hrg.hipster.entity.tooling.meta.InterfaceInfo;
 import hr.hrg.hipster.entity.tooling.meta.Property;
+import hr.hrg.hipster.entity.tooling.meta.TypeDescriptor;
+import hr.hrg.hipster.entity.tooling.meta.ViewAttributes;
 import hr.hrg.hipster.entity.tooling.meta.ViewMeta;
 
 import java.io.IOException;
@@ -110,24 +112,6 @@ public class EntityMetadataGenerator {
 
     // metadata classes are now top-level in same package (Property, ViewMeta, EntityMeta, EntityFieldMeta)
 
-    private static class TypeDescriptor {
-        final String typeName;
-        final List<TypeDescriptor> typeArguments;
-        final boolean array;
-        final boolean primitive;
-
-        TypeDescriptor(String typeName, List<TypeDescriptor> typeArguments, boolean array, boolean primitive) {
-            this.typeName = typeName;
-            this.typeArguments = typeArguments;
-            this.array = array;
-            this.primitive = primitive;
-        }
-
-        boolean isParameterized() {
-            return typeArguments != null && !typeArguments.isEmpty();
-        }
-    }
-
     private static TypeDescriptor parseTypeDescriptor(String rawType) {
         String type = rawType.trim();
         boolean array = false;
@@ -165,32 +149,32 @@ public class EntityMetadataGenerator {
 
     private static void appendJsonType(StringBuilder sb, TypeDescriptor td, boolean trailingComma, int indent) {
         String indentStr = " ".repeat(indent);
-        if (!td.isParameterized() && !td.array) {
-            if (td.primitive) {
+        if (!td.isParameterized() && !td.array()) {
+            if (td.primitive()) {
                 sb.append(indentStr).append("{\n");
-                sb.append(indentStr).append("  \"type\": \"").append(td.typeName).append("\",").append("\n");
-                sb.append(indentStr).append("  \"unboxed\": \"").append(unboxedPrimitiveType(td.typeName)).append("\",").append("\n");
+                sb.append(indentStr).append("  \"type\": \"").append(td.typeName()).append("\",").append("\n");
+                sb.append(indentStr).append("  \"unboxed\": \"").append(unboxedPrimitiveType(td.typeName())).append("\",").append("\n");
                 sb.append(indentStr).append("  \"primitive\": true\n");
                 sb.append(indentStr).append("}");
                 if (trailingComma) sb.append(",");
                 sb.append("\n");
                 return;
             }
-            sb.append(indentStr).append("\"").append(td.typeName).append("\"");
+            sb.append(indentStr).append("\"").append(td.typeName()).append("\"");
             if (trailingComma) sb.append(",");
             sb.append("\n");
             return;
         }
 
         sb.append(indentStr).append("{\n");
-        sb.append(indentStr).append("  \"type\": \"").append(td.typeName).append("\",").append("\n");
-        if (td.array) {
+        sb.append(indentStr).append("  \"type\": \"").append(td.typeName()).append("\",").append("\n");
+        if (td.array()) {
             sb.append(indentStr).append("  \"array\": true,").append("\n");
         }
         if (td.isParameterized()) {
             sb.append(indentStr).append("  \"genericArguments\": [\n");
-            for (int i = 0; i < td.typeArguments.size(); i++) {
-                appendJsonType(sb, td.typeArguments.get(i), i < td.typeArguments.size() - 1, indent + 4);
+            for (int i = 0; i < td.typeArguments().size(); i++) {
+                appendJsonType(sb, td.typeArguments().get(i), i < td.typeArguments().size() - 1, indent + 4);
             }
             sb.append(indentStr).append("  ]\n");
         }
@@ -300,23 +284,22 @@ public class EntityMetadataGenerator {
                                 continue;
                             }
 
-                            InterfaceInfo info = new InterfaceInfo();
-                            info.packageName = packageName;
-                            info.name = decl.getNameAsString();
-                            info.extendsTypes = decl.getExtendedTypes().stream()
-                                    .map(ClassOrInterfaceType::asString)
-                                    .collect(Collectors.toList());
-
-                            info.properties = decl.getMethods().stream()
-                                    .filter(method -> method.getParameters().isEmpty())
-                                    .filter(method -> !method.getType().isVoidType())
-                                    .map(method -> parseProperty(method))
-                                    .collect(Collectors.toList());
-
-                            info.view = parseViewAnnotation(decl);
-                            info.entityBaseIdType = parseEntityBaseIdType(decl);
-                            info.lineNumber = decl.getBegin().map(pos -> pos.line).orElse(-1);
-                            interfaceMap.put(getQualifiedName(packageName, info.name), info);
+                            InterfaceInfo info = new InterfaceInfo(
+                                    packageName,
+                                    decl.getNameAsString(),
+                                    decl.getExtendedTypes().stream()
+                                            .map(ClassOrInterfaceType::asString)
+                                            .collect(Collectors.toList()),
+                                    decl.getMethods().stream()
+                                            .filter(method -> method.getParameters().isEmpty())
+                                            .filter(method -> !method.getType().isVoidType())
+                                            .map(method -> parseProperty(method))
+                                            .collect(Collectors.toList()),
+                                    parseViewAnnotation(decl),
+                                    parseEntityBaseIdType(decl),
+                                    decl.getBegin().map(pos -> pos.line).orElse(-1)
+                            );
+                            interfaceMap.put(getQualifiedName(packageName, info.name()), info);
                         }
 
                     } catch (IOException e) {
@@ -334,23 +317,23 @@ public class EntityMetadataGenerator {
             boolean derivedFromAnotherMarker = markers.stream()
                     .anyMatch(other -> other != info && isDerivedFrom(info, other, interfaceMap));
             if (!derivedFromAnotherMarker) {
-                packageToMarkers.computeIfAbsent(info.packageName, __ -> new ArrayList<>()).add(info);
+                packageToMarkers.computeIfAbsent(info.packageName(), __ -> new ArrayList<>()).add(info);
             }
         }
 
         for (List<InterfaceInfo> roots : packageToMarkers.values()) {
             for (InterfaceInfo marker : roots) {
-                String entityName = marker.name.endsWith("Entity") ? marker.name.substring(0, marker.name.length() - 6) : marker.name;
+                String entityName = marker.name().endsWith("Entity") ? marker.name().substring(0, marker.name().length() - 6) : marker.name();
 
                 List<ViewMeta> views = interfaceMap.values().stream()
-                        .filter(i -> !i.name.equals(marker.name))
+                        .filter(i -> !i.name().equals(marker.name()))
                         .filter(i -> isDerivedFrom(i, marker, interfaceMap))
-                        .map(i -> new ViewMeta(i.name, i.extendsTypes, i.view == null ? null : i.view.read,
-                                i.view == null ? null : i.view.write, i.properties, i.lineNumber))
+                        .map(i -> new ViewMeta(i.name(), i.extendsTypes(), i.view() == null ? null : i.view().read(),
+                                i.view() == null ? null : i.view().write(), i.properties(), i.lineNumber()))
                         .collect(Collectors.toList());
 
                 List<EntityFieldMeta> allFields = collectEntityFields(views, marker, interfaceMap);
-                EntityMeta entityMeta = new EntityMeta(entityName, marker.packageName, marker.name, marker.entityBaseIdType, views, allFields);
+                EntityMeta entityMeta = new EntityMeta(entityName, marker.packageName(), marker.name(), marker.entityBaseIdType(), views, allFields);
                 String json = toJson(entityMeta);
 
                 Files.createDirectories(outputDir);
@@ -358,43 +341,11 @@ public class EntityMetadataGenerator {
                 Files.writeString(outFile, json);
 
                 for (ViewMeta view : views) {
-                    InterfaceInfo viewInfo = interfaceMap.get(getQualifiedName(marker.packageName, view.name));
+                    InterfaceInfo viewInfo = interfaceMap.get(getQualifiedName(marker.packageName(), view.name()));
                     List<Property> fullProperties = collectViewProperties(viewInfo, marker, interfaceMap);
-                    generateViewPropertyEnum(javaOutputRoot, marker.packageName, view, fullProperties);
+                    generateViewPropertyEnum(javaOutputRoot, marker.packageName(), view, fullProperties);
                 }
             }
-        }
-    }
-
-    private static class InterfaceInfo {
-        String packageName;
-        String name;
-        List<String> extendsTypes;
-        List<Property> properties;
-        ViewAttributes view;
-        String entityBaseIdType;
-        int lineNumber;
-
-        boolean isMarkerEntity() {
-            return entityBaseIdType != null;
-        }
-
-        public String getPackageName() { return packageName; }
-        public String getName() { return name; }
-        public List<String> getExtendsTypes() { return extendsTypes; }
-        public List<Property> getProperties() { return properties; }
-        public ViewAttributes getView() { return view; }
-        public String getEntityBaseIdType() { return entityBaseIdType; }
-        public int getLineNumber() { return lineNumber; }
-    }
-
-    private static class ViewAttributes {
-        final Boolean read;
-        final Boolean write;
-
-        private ViewAttributes(Boolean read, Boolean write) {
-            this.read = read;
-            this.write = write;
         }
     }
 
@@ -446,37 +397,37 @@ public class EntityMetadataGenerator {
         LinkedHashMap<String, EntityFieldMeta> fieldMap = new LinkedHashMap<>();
 
         // id field is always first
-        String idType = marker != null && marker.entityBaseIdType != null ? toFullTypeName(marker.entityBaseIdType) : "java.lang.Object";
-        List<String> idViews = views.stream().map(v -> v.name).collect(Collectors.toList());
+        String idType = marker != null && marker.entityBaseIdType() != null ? toFullTypeName(marker.entityBaseIdType()) : "java.lang.Object";
+        List<String> idViews = views.stream().map(ViewMeta::name).collect(Collectors.toList());
         EntityFieldMeta idField = new EntityFieldMeta("id", idType, "COLUMN", null, null, null, -1, idViews);
         for (String vn : idViews) idField.typeByView.put(vn, idType);
         fieldMap.put("id", idField);
 
         for (ViewMeta view : views) {
-            InterfaceInfo viewInfo = interfaceMap.get(getQualifiedName(marker.packageName, view.name));
+            InterfaceInfo viewInfo = interfaceMap.get(getQualifiedName(marker.packageName(), view.name()));
             List<Property> fullProps = collectViewProperties(viewInfo, marker, interfaceMap);
             for (Property prop : fullProps) {
-                String propKind = prop.fieldKind != null ? prop.fieldKind : "COLUMN";
-                if (fieldMap.containsKey(prop.name)) {
-                    EntityFieldMeta existing = fieldMap.get(prop.name);
-                    if (!existing.views.contains(view.name)) {
-                        existing.views.add(view.name);
+                String propKind = prop.fieldKind() != null ? prop.fieldKind() : "COLUMN";
+                if (fieldMap.containsKey(prop.name())) {
+                    EntityFieldMeta existing = fieldMap.get(prop.name());
+                    if (!existing.views.contains(view.name())) {
+                        existing.views.add(view.name());
                     }
-                    existing.typeByView.put(view.name, prop.type);
+                    existing.typeByView.put(view.name(), prop.type());
                     // Non-derived field takes priority over derived for primary type
                     if ("DERIVED".equals(existing.fieldKind) && !"DERIVED".equals(propKind)) {
-                        existing.type = prop.type;
+                        existing.type = prop.type();
                         existing.fieldKind = propKind;
-                        existing.column = prop.column;
-                        existing.relation = prop.relation;
-                        existing.expression = prop.expression;
+                        existing.column = prop.column();
+                        existing.relation = prop.relation();
+                        existing.expression = prop.expression();
                     }
                 } else {
                     List<String> viewList = new ArrayList<>();
-                    viewList.add(view.name);
-                    EntityFieldMeta fm = new EntityFieldMeta(prop.name, prop.type, propKind, prop.column, prop.relation, prop.expression, prop.lineNumber, viewList);
-                    fm.typeByView.put(view.name, prop.type);
-                    fieldMap.put(prop.name, fm);
+                    viewList.add(view.name());
+                    EntityFieldMeta fm = new EntityFieldMeta(prop.name(), prop.type(), propKind, prop.column(), prop.relation(), prop.expression(), prop.lineNumber(), viewList);
+                    fm.typeByView.put(view.name(), prop.type());
+                    fieldMap.put(prop.name(), fm);
                 }
             }
         }
@@ -537,7 +488,7 @@ public class EntityMetadataGenerator {
     }
 
     private static boolean isDerivedFrom(InterfaceInfo candidate, InterfaceInfo marker, Map<String, InterfaceInfo> interfaceMap) {
-        if (candidate.name.equals(marker.name)) {
+        if (candidate.name().equals(marker.name())) {
             return false;
         }
 
@@ -546,21 +497,21 @@ public class EntityMetadataGenerator {
     }
 
     private static boolean isDerivedFromRecursive(InterfaceInfo candidate, InterfaceInfo marker, Map<String, InterfaceInfo> interfaceMap, Set<String> visited) {
-        if (visited.contains(candidate.name)) {
+        if (visited.contains(candidate.name())) {
             return false;
         }
-        visited.add(candidate.name);
+        visited.add(candidate.name());
 
-        for (String extName : candidate.extendsTypes) {
+        for (String extName : candidate.extendsTypes()) {
             if (extName.contains("<")) {
                 extName = extName.substring(0, extName.indexOf('<'));
             }
 
-            if (extName.equals(marker.name) || extName.equals(marker.packageName + "." + marker.name)) {
+            if (extName.equals(marker.name()) || extName.equals(marker.packageName() + "." + marker.name())) {
                 return true;
             }
 
-            InterfaceInfo parent = interfaceMap.get(getQualifiedName(candidate.packageName, extName));
+            InterfaceInfo parent = interfaceMap.get(getQualifiedName(candidate.packageName(), extName));
             if (parent != null && isDerivedFromRecursive(parent, marker, interfaceMap, visited)) {
                 return true;
             }
@@ -572,59 +523,59 @@ public class EntityMetadataGenerator {
     private static String toJson(EntityMeta entityMeta) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
-        appendJsonField(sb, "entityName", entityMeta.entityName, true);
-        appendJsonField(sb, "package", entityMeta.packageName, true);
-        appendJsonField(sb, "markerInterface", entityMeta.markerInterface, true);
-        appendJsonField(sb, "idType", entityMeta.idType, true, 2);
+        appendJsonField(sb, "entityName", entityMeta.entityName(), true);
+        appendJsonField(sb, "package", entityMeta.packageName(), true);
+        appendJsonField(sb, "markerInterface", entityMeta.markerInterface(), true);
+        appendJsonField(sb, "idType", entityMeta.idType(), true, 2);
 
         sb.append("  \"views\": [\n");
-        for (int i = 0; i < entityMeta.views.size(); i++) {
-            ViewMeta view = entityMeta.views.get(i);
+        for (int i = 0; i < entityMeta.views().size(); i++) {
+            ViewMeta view = entityMeta.views().get(i);
             sb.append("    {\n");
-            appendJsonField(sb, "name", view.name, true, 6);
-            appendJsonField(sb, "lineNumber", view.lineNumber, true, 6);
+            appendJsonField(sb, "name", view.name(), true, 6);
+            appendJsonField(sb, "lineNumber", view.lineNumber(), true, 6);
             sb.append("      \"extends\": [");
 
-            sb.append(view.extendsTypes.stream().map(EntityMetadataGenerator::escapeJson).map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")));
+            sb.append(view.extendsTypes().stream().map(EntityMetadataGenerator::escapeJson).map(s -> "\"" + s + "\"").collect(Collectors.joining(", ")));
             sb.append("],\n");
-            appendJsonField(sb, "read", view.read, true, 6);
-            appendJsonField(sb, "write", view.write, true, 6);
+            appendJsonField(sb, "read", view.read(), true, 6);
+            appendJsonField(sb, "write", view.write(), true, 6);
             sb.append("      \"properties\": [\n");
-            for (int j = 0; j < view.properties.size(); j++) {
-                Property prop = view.properties.get(j);
+            for (int j = 0; j < view.properties().size(); j++) {
+                Property prop = view.properties().get(j);
                 sb.append("        {\n");
-                appendJsonField(sb, "name", prop.name, true, 8);
+                appendJsonField(sb, "name", prop.name(), true, 8);
                 sb.append("        \"type\": ");
-                boolean hasFieldKind = prop.fieldKind != null;
-                appendJsonType(sb, parseTypeDescriptor(prop.type), true, 0);
-                appendJsonField(sb, "lineNumber", prop.lineNumber, hasFieldKind, 8);
-                if (prop.fieldKind != null) {
-                    appendJsonField(sb, "fieldKind", prop.fieldKind, prop.column != null || prop.relation != null || prop.expression != null, 8);
-                    if (prop.column != null) {
-                        appendJsonField(sb, "column", prop.column, prop.relation != null || prop.expression != null, 8);
+                boolean hasFieldKind = prop.fieldKind() != null;
+                appendJsonType(sb, parseTypeDescriptor(prop.type()), true, 0);
+                appendJsonField(sb, "lineNumber", prop.lineNumber(), hasFieldKind, 8);
+                if (prop.fieldKind() != null) {
+                    appendJsonField(sb, "fieldKind", prop.fieldKind(), prop.column() != null || prop.relation() != null || prop.expression() != null, 8);
+                    if (prop.column() != null) {
+                        appendJsonField(sb, "column", prop.column(), prop.relation() != null || prop.expression() != null, 8);
                     }
-                    if (prop.relation != null) {
-                        appendJsonField(sb, "relation", prop.relation, prop.expression != null, 8);
+                    if (prop.relation() != null) {
+                        appendJsonField(sb, "relation", prop.relation(), prop.expression() != null, 8);
                     }
-                    if (prop.expression != null) {
-                        appendJsonField(sb, "expression", prop.expression, false, 8);
+                    if (prop.expression() != null) {
+                        appendJsonField(sb, "expression", prop.expression(), false, 8);
                     }
                 }
                 sb.append("        }");
-                if (j < view.properties.size() - 1) sb.append(",");
+                if (j < view.properties().size() - 1) sb.append(",");
                 sb.append("\n");
             }
             sb.append("      ]\n");
             sb.append("    }");
-            if (i < entityMeta.views.size() - 1) sb.append(",");
+            if (i < entityMeta.views().size() - 1) sb.append(",");
             sb.append("\n");
         }
         sb.append("  ],\n");
 
         // Entity-wide field summary
         sb.append("  \"allFields\": [\n");
-        for (int i = 0; i < entityMeta.allFields.size(); i++) {
-            EntityFieldMeta f = entityMeta.allFields.get(i);
+        for (int i = 0; i < entityMeta.allFields().size(); i++) {
+            EntityFieldMeta f = entityMeta.allFields().get(i);
             sb.append("    {\n");
             appendJsonField(sb, "name", f.name, true, 6);
             sb.append("      \"type\": ");
@@ -653,7 +604,7 @@ public class EntityMetadataGenerator {
             }
             sb.append("      }\n");
             sb.append("    }");
-            if (i < entityMeta.allFields.size() - 1) sb.append(",");
+            if (i < entityMeta.allFields().size() - 1) sb.append(",");
             sb.append("\n");
         }
         sb.append("  ]\n");
@@ -709,9 +660,9 @@ public class EntityMetadataGenerator {
     }
 
     private static void generateViewPropertyEnum(Path outputDir, String packageName, ViewMeta view, List<Property> fullProperties) throws IOException {
-        FieldBoilerplateGenerator.builder(packageName, view.name, fullProperties)
+        FieldBoilerplateGenerator.builder(packageName, view.name(), fullProperties)
                 .withPropertyEnumMode()
-                .withEnumTypeName(view.name + "_")
+                .withEnumTypeName(view.name() + "_")
                 .generate(outputDir);
     }
 
@@ -725,7 +676,7 @@ public class EntityMetadataGenerator {
     private static List<Property> collectViewProperties(InterfaceInfo viewInfo, InterfaceInfo marker, Map<String, InterfaceInfo> interfaceMap) {
         LinkedHashMap<String, Property> merged = new LinkedHashMap<>();
 
-        String idType = marker != null && marker.entityBaseIdType != null ? toFullTypeName(marker.entityBaseIdType) : "java.lang.Object";
+        String idType = marker != null && marker.entityBaseIdType() != null ? toFullTypeName(marker.entityBaseIdType()) : "java.lang.Object";
         merged.put("id", new Property("id", idType, -1));
 
         Set<String> visited = new HashSet<>();
@@ -735,19 +686,19 @@ public class EntityMetadataGenerator {
     }
 
     private static void collectInterfaceProperties(InterfaceInfo current, LinkedHashMap<String, Property> merged, Map<String, InterfaceInfo> interfaceMap, Set<String> visited) {
-        if (current == null || !visited.add(current.name)) {
+        if (current == null || !visited.add(current.name())) {
             return;
         }
 
-        for (String extName : current.extendsTypes) {
-            String qualified = extName.contains(".") ? extName : getQualifiedName(current.packageName, extName.replaceAll("<.*>$", ""));
+        for (String extName : current.extendsTypes()) {
+            String qualified = extName.contains(".") ? extName : getQualifiedName(current.packageName(), extName.replaceAll("<.*>$", ""));
             InterfaceInfo parent = interfaceMap.get(qualified);
             collectInterfaceProperties(parent, merged, interfaceMap, visited);
         }
 
-        for (Property prop : current.properties) {
-            if (!merged.containsKey(prop.name)) {
-                merged.put(prop.name, prop);
+        for (Property prop : current.properties()) {
+            if (!merged.containsKey(prop.name())) {
+                merged.put(prop.name(), prop);
             }
         }
     }

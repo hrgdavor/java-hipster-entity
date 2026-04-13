@@ -71,38 +71,38 @@ public class EntityMetadataGeneratorTest {
         EntityMeta entityMeta = EntityMetadataGenerator.fromJson(json);
 
         // Entity basics
-        Assertions.assertEquals("Person", entityMeta.entityName);
-        Assertions.assertEquals("PersonEntity", entityMeta.markerInterface);
-        Assertions.assertEquals("Long", entityMeta.idType);
+        Assertions.assertEquals("Person", entityMeta.entityName());
+        Assertions.assertEquals("PersonEntity", entityMeta.markerInterface());
+        Assertions.assertEquals("Long", entityMeta.idType());
 
         // View properties
-        Assertions.assertNotNull(entityMeta.views);
-        Assertions.assertEquals(2, entityMeta.views.size());
+        Assertions.assertNotNull(entityMeta.views());
+        Assertions.assertEquals(2, entityMeta.views().size());
 
         ViewMeta personSummary = null;
-        for (ViewMeta view : entityMeta.views) {
-            if ("PersonSummary".equals(view.name)) {
+        for (ViewMeta view : entityMeta.views()) {
+            if ("PersonSummary".equals(view.name())) {
                 personSummary = view;
                 break;
             }
         }
         Assertions.assertNotNull(personSummary, "PersonSummary view should exist");
-        Assertions.assertEquals(8, personSummary.lineNumber);
+        Assertions.assertEquals(8, personSummary.lineNumber());
 
         Property firstNameProp = null;
-        for (Property prop : personSummary.properties) {
-            if ("firstName".equals(prop.name)) {
+        for (Property prop : personSummary.properties()) {
+            if ("firstName".equals(prop.name())) {
                 firstNameProp = prop;
                 break;
             }
         }
         Assertions.assertNotNull(firstNameProp, "firstName property should exist");
-        Assertions.assertTrue(firstNameProp.lineNumber > 0, "firstName lineNumber should be > 0");
+        Assertions.assertTrue(firstNameProp.lineNumber() > 0, "firstName lineNumber should be > 0");
 
-        Assertions.assertNotNull(entityMeta.allFields);
+        Assertions.assertNotNull(entityMeta.allFields());
         EntityFieldMeta ageField = null;
         EntityFieldMeta firstNameField = null;
-        for (EntityFieldMeta field : entityMeta.allFields) {
+        for (EntityFieldMeta field : entityMeta.allFields()) {
             if ("age".equals(field.name)) ageField = field;
             if ("firstName".equals(field.name)) firstNameField = field;
         }
