@@ -1,5 +1,15 @@
 # java-hipster-entity
 
+
+
+
+
+develoment has temporarily moved to https://github.com/hrgdavor/jcodebuddy
+
+
+
+
+
 `hipster-entity` is an interface-first Java entity model focused on extracting strong structural metadata that can be reused across runtime helpers, code generation, and higher-level tooling.
 
 The project favors explicit metadata and predictable contracts over reflection-heavy runtime discovery. Runtime helpers such as proxies, builders, and factories are layered components that can be adopted incrementally.
